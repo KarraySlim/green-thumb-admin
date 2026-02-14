@@ -1,5 +1,5 @@
 import { Outlet, Navigate, useLocation } from "react-router-dom";
-import { Droplets, Leaf, Grid3X3, Workflow, Users } from "lucide-react";
+import { Droplets, Leaf, Grid3X3, Workflow, Users, Mountain, CloudSun, FileStack } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import {
   SidebarProvider,
@@ -21,7 +21,10 @@ const navItems = [
   { title: "Plantes", url: "/admin/plantes", icon: Leaf },
   { title: "Vannes", url: "/admin/vannes", icon: Droplets },
   { title: "Types de plante", url: "/admin/types-plante", icon: Workflow },
+  { title: "Sols", url: "/admin/sols", icon: Mountain },
+  { title: "Climats", url: "/admin/climats", icon: CloudSun },
   { title: "Clients", url: "/admin/clients", icon: Users },
+  { title: "Nouveau projet", url: "/admin/wizard", icon: FileStack },
 ];
 
 const pageTitles: Record<string, string> = {
@@ -29,7 +32,10 @@ const pageTitles: Record<string, string> = {
   "/admin/plantes": "Plantes",
   "/admin/vannes": "Vannes",
   "/admin/types-plante": "Types de plante",
+  "/admin/sols": "Sols",
+  "/admin/climats": "Climats",
   "/admin/clients": "Clients",
+  "/admin/wizard": "Nouveau projet d'irrigation",
 };
 
 export default function AdminLayout() {
