@@ -12,6 +12,9 @@ import ClientsPage from "@/pages/admin/ClientsPage";
 import SolsPage from "@/pages/admin/SolsPage";
 import ClimatsPage from "@/pages/admin/ClimatsPage";
 import WizardPage from "@/pages/admin/WizardPage";
+import TravailPage from "@/pages/admin/TravailPage";
+import ClientDetailPage from "@/pages/admin/ClientDetailPage";
+import SurfaceDetailPage from "@/pages/admin/SurfaceDetailPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,6 +36,9 @@ const App = () => (
             <Route path="sols" element={<SolsPage />} />
             <Route path="climats" element={<ClimatsPage />} />
             <Route path="wizard" element={<WizardPage />} />
+            <Route path="travail" element={<TravailPage />} />
+            <Route path="travail/client/:clientId" element={<ClientDetailPage />} />
+            <Route path="travail/surface/:surfaceId" element={<SurfaceDetailPage />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
