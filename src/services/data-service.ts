@@ -1,5 +1,5 @@
-import { Client, TypePlante, Surface, Plante, Vanne } from "@/types/models";
-import { clients, typesPlante, surfaces, plantes, vannes } from "./mock-data";
+import { Client, TypePlante, Surface, Plante, Vanne, Sol, Climat } from "@/types/models";
+import { clients, typesPlante, surfaces, plantes, vannes, sols, climats } from "./mock-data";
 
 // Helper
 const uuid = () => crypto.randomUUID();
@@ -105,9 +105,36 @@ export const deleteVanne = async (id: string): Promise<void> => {
   const vanne = vannes.find((v) => v.id === id);
   const idx = vannes.findIndex((v) => v.id === id);
   if (idx !== -1) vannes.splice(idx, 1);
-  // recalculate
   if (vanne) {
     const surf = surfaces.find((s) => s.id === vanne.fkSurface);
     if (surf) surf.nbVanne = vannes.filter((vn) => vn.fkSurface === surf.id).length;
   }
+};
+
+// ─── Sols ───────────────────────────────────────────
+export const getSols = async (): Promise<Sol[]> => [...sols];
+
+export const createSol = async (data: Omit<Sol, "id">): Promise<Sol> => {
+  const s: Sol = { id: uuid(), ...data };
+  sols.push(s);
+  return s;
+};
+
+export const deleteSol = async (id: string): Promise<void> => {
+  const idx = sols.findIndex((s) => s.id === id);
+  if (idx !== -1) sols.splice(idx, 1);
+};
+
+// ─── Climats ────────────────────────────────────────
+export const getClimats = async (): Promise<Climat[]> => [...climats];
+
+export const createClimat = async (data: Omit<Climat, "id">): Promise<Climat> => {
+  const c: Climat = { id: uuid(), ...data };
+  climats.push(c);
+  return c;
+};
+
+export const deleteClimat = async (id: string): Promise<void> => {
+  const idx = climats.findIndex((c) => c.id === id);
+  if (idx !== -1) climats.splice(idx, 1);
 };
