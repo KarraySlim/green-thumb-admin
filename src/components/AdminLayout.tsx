@@ -4,6 +4,7 @@ import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import logoTesla from "@/assets/logo-tesla-energie.png";
 import {
   SidebarProvider,
   Sidebar,
@@ -77,11 +78,20 @@ export default function AdminLayout() {
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
         <Sidebar>
-          <SidebarHeader className="p-4">
+          <SidebarHeader className="p-4 border-b border-sidebar-border">
+            {/* Logo */}
+            <div className="flex items-center gap-2 mb-4">
+              <img src={logoTesla} alt="Tesla Energie" className="h-10 w-10 object-contain" />
+              <div className="flex flex-col leading-tight">
+                <span className="text-sm font-bold text-sidebar-foreground tracking-wide">TESLA</span>
+                <span className="text-[10px] font-semibold tracking-[0.25em] text-primary">ENERGIE</span>
+              </div>
+            </div>
+            {/* User info */}
             <div className="flex items-center gap-2">
               <Avatar className="h-8 w-8">
                 <AvatarImage src={profile?.avatar_url ?? undefined} />
-                <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+                <AvatarFallback className="text-xs bg-primary/10 text-primary">{initials}</AvatarFallback>
               </Avatar>
               <div className="flex flex-col min-w-0">
                 <span className="text-sm font-semibold text-sidebar-foreground truncate">{displayName}</span>
@@ -101,7 +111,7 @@ export default function AdminLayout() {
                           to={item.url}
                           end
                           className="hover:bg-sidebar-accent/50"
-                          activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                          activeClassName="bg-primary/10 text-primary font-medium"
                         >
                           <item.icon className="mr-2 h-4 w-4" />
                           <span>{item.title}</span>
@@ -114,7 +124,7 @@ export default function AdminLayout() {
             </SidebarGroup>
           </SidebarContent>
           <SidebarFooter className="p-4">
-            <Button variant="ghost" className="w-full justify-start text-muted-foreground" onClick={signOut}>
+            <Button variant="ghost" className="w-full justify-start text-muted-foreground hover:text-destructive" onClick={signOut}>
               <LogOut className="mr-2 h-4 w-4" />
               Déconnexion
             </Button>
