@@ -1,6 +1,9 @@
 import { Outlet, Navigate, useLocation } from "react-router-dom";
-import { Droplets, Leaf, Grid3X3, Workflow, Users, Mountain, CloudSun, FileStack, Briefcase } from "lucide-react";
+import { Droplets, Leaf, Grid3X3, Workflow, Users, Mountain, CloudSun, FileStack, Briefcase, LogOut } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
+import { useAuth } from "@/hooks/useAuth";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
   SidebarProvider,
   Sidebar,
@@ -14,6 +17,7 @@ import {
   SidebarTrigger,
   SidebarInset,
   SidebarHeader,
+  SidebarFooter,
 } from "@/components/ui/sidebar";
 
 const navItems = [
@@ -42,11 +46,32 @@ const pageTitles: Record<string, string> = {
 
 export default function AdminLayout() {
   const location = useLocation();
+  const { user, profile, loading, signOut } = useAuth();
   const title = pageTitles[location.pathname] ?? "Administration";
 
-  if (location.pathname === "/admin" || location.pathname === "/admin/") {
-    return <Navigate to="/admin/surfaces" replace />;
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Droplets className="h-8 w-8 animate-pulse text-primary" />
+      </div>
+    );
   }
+
+  if (!user) {
+    return <Navigate to="/auth/login" replace />;
+  }
+
+  if (location.pathname === "/admin" || location.pathname === "/admin/") {
+    return <Navigate to="/admin/travail" replace />;
+  }
+
+  const displayName = profile?.first_name
+    ? `${profile.first_name} ${profile.last_name ?? ""}`.trim()
+    : user.email ?? "";
+
+  const initials = profile?.first_name
+    ? `${profile.first_name[0]}${(profile.last_name?.[0] ?? "")}`.toUpperCase()
+    : (user.email?.[0] ?? "U").toUpperCase();
 
   return (
     <SidebarProvider>
@@ -54,8 +79,14 @@ export default function AdminLayout() {
         <Sidebar>
           <SidebarHeader className="p-4">
             <div className="flex items-center gap-2">
-              <Droplets className="h-6 w-6 text-primary" />
-              <span className="text-lg font-bold text-sidebar-foreground">Irrigation Admin</span>
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={profile?.avatar_url ?? undefined} />
+                <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col min-w-0">
+                <span className="text-sm font-semibold text-sidebar-foreground truncate">{displayName}</span>
+                <span className="text-xs text-muted-foreground truncate">{user.email}</span>
+              </div>
             </div>
           </SidebarHeader>
           <SidebarContent>
@@ -82,6 +113,12 @@ export default function AdminLayout() {
               </SidebarGroupContent>
             </SidebarGroup>
           </SidebarContent>
+          <SidebarFooter className="p-4">
+            <Button variant="ghost" className="w-full justify-start text-muted-foreground" onClick={signOut}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Déconnexion
+            </Button>
+          </SidebarFooter>
         </Sidebar>
 
         <SidebarInset>
