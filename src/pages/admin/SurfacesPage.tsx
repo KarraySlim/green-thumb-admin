@@ -10,10 +10,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DeleteDialog } from "@/components/DeleteDialog";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, X } from "lucide-react";
+import LocationPicker from "@/components/LocationPicker";
 
 export default function SurfacesPage() {
   const [showForm, setShowForm] = useState(false);
   const [selectedClient, setSelectedClient] = useState("");
+  const [localisation, setLocalisation] = useState("");
   const { toast } = useToast();
   const qc = useQueryClient();
 
@@ -22,7 +24,7 @@ export default function SurfacesPage() {
 
   const createMut = useMutation({
     mutationFn: createSurface,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["surfaces"] }); setShowForm(false); setSelectedClient(""); toast({ title: "Surface créée" }); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["surfaces"] }); setShowForm(false); setSelectedClient(""); setLocalisation(""); toast({ title: "Surface créée" }); },
   });
 
   const deleteMut = useMutation({
@@ -35,7 +37,7 @@ export default function SurfacesPage() {
     const fd = new FormData(e.currentTarget);
     createMut.mutate({
       nomSurface: fd.get("nomSurface") as string,
-      localisation: fd.get("localisation") as string,
+      localisation,
       fkClient: selectedClient,
     });
   };
@@ -55,7 +57,10 @@ export default function SurfacesPage() {
           <CardContent>
             <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div><Label>Nom surface</Label><Input name="nomSurface" required /></div>
-              <div><Label>Localisation</Label><Input name="localisation" required /></div>
+              <div>
+                <Label>Localisation</Label>
+                <LocationPicker value={localisation} onChange={setLocalisation} placeholder="Choisir localisation" />
+              </div>
               <div>
                 <Label>Client</Label>
                 <Select value={selectedClient} onValueChange={setSelectedClient}>

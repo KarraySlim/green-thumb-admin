@@ -1,9 +1,11 @@
 import { Outlet, Navigate, useLocation } from "react-router-dom";
-import { Droplets, Leaf, Grid3X3, Workflow, Users, Mountain, CloudSun, FileStack, Briefcase, LogOut } from "lucide-react";
+import { Droplets, Leaf, Grid3X3, Workflow, Users, Mountain, CloudSun, FileStack, Briefcase, LogOut, CreditCard } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 import logoTesla from "@/assets/logo-tesla-energie.png";
 import {
   SidebarProvider,
@@ -22,33 +24,37 @@ import {
 } from "@/components/ui/sidebar";
 
 const navItems = [
-  { title: "Travail", url: "/admin/travail", icon: Briefcase },
-  { title: "Surfaces", url: "/admin/surfaces", icon: Grid3X3 },
-  { title: "Plantes", url: "/admin/plantes", icon: Leaf },
-  { title: "Vannes", url: "/admin/vannes", icon: Droplets },
-  { title: "Types de plante", url: "/admin/types-plante", icon: Workflow },
-  { title: "Sols", url: "/admin/sols", icon: Mountain },
-  { title: "Climats", url: "/admin/climats", icon: CloudSun },
-  { title: "Clients", url: "/admin/clients", icon: Users },
-  { title: "Nouveau projet", url: "/admin/wizard", icon: FileStack },
+  { titleKey: "nav.travail", url: "/admin/travail", icon: Briefcase },
+  { titleKey: "nav.surfaces", url: "/admin/surfaces", icon: Grid3X3 },
+  { titleKey: "nav.plantes", url: "/admin/plantes", icon: Leaf },
+  { titleKey: "nav.vannes", url: "/admin/vannes", icon: Droplets },
+  { titleKey: "nav.typesPlante", url: "/admin/types-plante", icon: Workflow },
+  { titleKey: "nav.sols", url: "/admin/sols", icon: Mountain },
+  { titleKey: "nav.climats", url: "/admin/climats", icon: CloudSun },
+  { titleKey: "nav.clients", url: "/admin/clients", icon: Users },
+  { titleKey: "nav.subscriptions", url: "/admin/subscriptions", icon: CreditCard },
+  { titleKey: "nav.wizard", url: "/admin/wizard", icon: FileStack },
 ];
 
-const pageTitles: Record<string, string> = {
-  "/admin/travail": "Travail",
-  "/admin/surfaces": "Surfaces",
-  "/admin/plantes": "Plantes",
-  "/admin/vannes": "Vannes",
-  "/admin/types-plante": "Types de plante",
-  "/admin/sols": "Sols",
-  "/admin/climats": "Climats",
-  "/admin/clients": "Clients",
-  "/admin/wizard": "Nouveau projet d'irrigation",
+const pageTitleKeys: Record<string, string> = {
+  "/admin/travail": "nav.travail",
+  "/admin/surfaces": "nav.surfaces",
+  "/admin/plantes": "nav.plantes",
+  "/admin/vannes": "nav.vannes",
+  "/admin/types-plante": "nav.typesPlante",
+  "/admin/sols": "nav.sols",
+  "/admin/climats": "nav.climats",
+  "/admin/clients": "nav.clients",
+  "/admin/wizard": "nav.wizard",
+  "/admin/subscriptions": "nav.subscriptions",
 };
 
 export default function AdminLayout() {
   const location = useLocation();
   const { user, profile, loading, signOut } = useAuth();
-  const title = pageTitles[location.pathname] ?? "Administration";
+  const { t } = useLanguage();
+  const titleKey = pageTitleKeys[location.pathname];
+  const title = titleKey ? t(titleKey) : "Administration";
 
   if (loading) {
     return (
@@ -79,7 +85,6 @@ export default function AdminLayout() {
       <div className="min-h-screen flex w-full">
         <Sidebar>
           <SidebarHeader className="p-4 border-b border-sidebar-border">
-            {/* Logo */}
             <div className="flex items-center gap-2 mb-4">
               <img src={logoTesla} alt="Tesla Energie" className="h-10 w-10 object-contain" />
               <div className="flex flex-col leading-tight">
@@ -87,7 +92,6 @@ export default function AdminLayout() {
                 <span className="text-[10px] font-semibold tracking-[0.25em] text-primary">ENERGIE</span>
               </div>
             </div>
-            {/* User info */}
             <div className="flex items-center gap-2">
               <Avatar className="h-8 w-8">
                 <AvatarImage src={profile?.avatar_url ?? undefined} />
@@ -101,11 +105,11 @@ export default function AdminLayout() {
           </SidebarHeader>
           <SidebarContent>
             <SidebarGroup>
-              <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+              <SidebarGroupLabel>{t("nav.navigation")}</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
                   {navItems.map((item) => (
-                    <SidebarMenuItem key={item.title}>
+                    <SidebarMenuItem key={item.titleKey}>
                       <SidebarMenuButton asChild>
                         <NavLink
                           to={item.url}
@@ -114,7 +118,7 @@ export default function AdminLayout() {
                           activeClassName="bg-primary/10 text-primary font-medium"
                         >
                           <item.icon className="mr-2 h-4 w-4" />
-                          <span>{item.title}</span>
+                          <span>{t(item.titleKey)}</span>
                         </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -126,7 +130,7 @@ export default function AdminLayout() {
           <SidebarFooter className="p-4">
             <Button variant="ghost" className="w-full justify-start text-muted-foreground hover:text-destructive" onClick={signOut}>
               <LogOut className="mr-2 h-4 w-4" />
-              Déconnexion
+              {t("nav.logout")}
             </Button>
           </SidebarFooter>
         </Sidebar>
@@ -134,7 +138,8 @@ export default function AdminLayout() {
         <SidebarInset>
           <header className="flex h-14 items-center gap-2 border-b px-4">
             <SidebarTrigger />
-            <h1 className="text-lg font-semibold text-foreground">{title}</h1>
+            <h1 className="text-lg font-semibold text-foreground flex-1">{title}</h1>
+            <LanguageSwitcher />
           </header>
           <div className="p-6">
             <Outlet />

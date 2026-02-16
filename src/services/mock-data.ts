@@ -1,10 +1,12 @@
 import { Client, TypePlante, Sol, Climat, Surface, Plante, Vanne } from "@/types/models";
 
 const CLIENT_ID = "c1000000-0000-0000-0000-000000000001";
+const CLIENT_ID2 = "c1000000-0000-0000-0000-000000000002";
 const TYPE_PLANTE_ID = "tp100000-0000-0000-0000-000000000001";
 const SOL_ID = "s1000000-0000-0000-0000-000000000001";
 const CLIMAT_ID = "cl100000-0000-0000-0000-000000000001";
 const SURFACE_ID = "sf100000-0000-0000-0000-000000000001";
+const SURFACE_ID2 = "sf100000-0000-0000-0000-000000000002";
 const PLANTE_ID = "pl100000-0000-0000-0000-000000000001";
 const VANNE_ID = "vn100000-0000-0000-0000-000000000001";
 
@@ -15,9 +17,29 @@ export const clients: Client[] = [
     role: "ADMIN",
     firstName: "Admin",
     lastName: "System",
-    phoneNumber: "+33600000000",
+    phoneNumber: "+21600000000",
     dateOfBirth: "1990-01-01",
-    location: "Paris, France",
+    location: "Tunis, Tunisie",
+    country: "TN",
+    city: "Tunis",
+    dateDebAbo: "2025-01-01",
+    dateExpAbo: "2026-06-01",
+    typeAbo: "full",
+  },
+  {
+    id: CLIENT_ID2,
+    email: "client@test.tn",
+    role: "CLIENT",
+    firstName: "Ahmed",
+    lastName: "Ben Ali",
+    phoneNumber: "+21655123456",
+    dateOfBirth: "1985-05-15",
+    location: "Sfax, Tunisie",
+    country: "TN",
+    city: "Sfax",
+    dateDebAbo: "2025-06-01",
+    dateExpAbo: "2025-12-01",
+    typeAbo: "op1",
   },
 ];
 
@@ -44,6 +66,15 @@ export const surfaces: Surface[] = [
     fkSol: SOL_ID,
     fkClimat: CLIMAT_ID,
     clientEmail: "admin@local.test",
+  },
+  {
+    id: SURFACE_ID2,
+    nomSurface: "Parcelle B",
+    localisation: "Zone Sud",
+    nbVanne: 0,
+    typeSol: "Sableux",
+    fkClient: CLIENT_ID2,
+    clientEmail: "client@test.tn",
   },
 ];
 
