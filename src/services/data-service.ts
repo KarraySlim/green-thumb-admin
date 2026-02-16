@@ -13,6 +13,13 @@ export const createClient = async (data: Omit<Client, "id">): Promise<Client> =>
   return c;
 };
 
+export const updateClient = async (id: string, data: Partial<Client>): Promise<Client | null> => {
+  const idx = clients.findIndex((c) => c.id === id);
+  if (idx === -1) return null;
+  clients[idx] = { ...clients[idx], ...data };
+  return clients[idx];
+};
+
 export const deleteClient = async (id: string): Promise<void> => {
   const idx = clients.findIndex((c) => c.id === id);
   if (idx !== -1) clients.splice(idx, 1);
@@ -47,8 +54,14 @@ export const createSurface = async (data: Omit<Surface, "id" | "nbVanne" | "clie
   return s;
 };
 
+export const updateSurface = async (id: string, data: Partial<Surface>): Promise<Surface | null> => {
+  const idx = surfaces.findIndex((s) => s.id === id);
+  if (idx === -1) return null;
+  surfaces[idx] = { ...surfaces[idx], ...data };
+  return surfaces[idx];
+};
+
 export const deleteSurface = async (id: string): Promise<void> => {
-  // cascade
   for (let i = plantes.length - 1; i >= 0; i--) if (plantes[i].fkSurface === id) plantes.splice(i, 1);
   for (let i = vannes.length - 1; i >= 0; i--) if (vannes[i].fkSurface === id) vannes.splice(i, 1);
   const idx = surfaces.findIndex((s) => s.id === id);
@@ -95,7 +108,6 @@ export const createVanne = async (data: Omit<Vanne, "id" | "surfaceNom">): Promi
     surfaceNom: surfaces.find((s) => s.id === data.fkSurface)?.nomSurface,
   };
   vannes.push(v);
-  // recalculate nb_vanne
   const surf = surfaces.find((s) => s.id === data.fkSurface);
   if (surf) surf.nbVanne = vannes.filter((vn) => vn.fkSurface === surf.id).length;
   return v;

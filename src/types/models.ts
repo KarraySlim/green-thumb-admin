@@ -7,8 +7,14 @@ export interface Client {
   phoneNumber: string;
   dateOfBirth: string;
   location: string;
+  country?: string;
+  city?: string;
   avatarUrl?: string;
   preferences?: Record<string, unknown>;
+  // Subscription
+  dateDebAbo?: string;
+  dateExpAbo?: string;
+  typeAbo?: "op1" | "op1_op2" | "full";
 }
 
 export interface TypePlante {
