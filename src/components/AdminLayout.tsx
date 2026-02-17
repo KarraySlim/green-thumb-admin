@@ -1,5 +1,5 @@
-import { Outlet, Navigate, useLocation } from "react-router-dom";
-import { Droplets, Leaf, Grid3X3, Workflow, Users, Mountain, CloudSun, FileStack, Briefcase, LogOut, CreditCard } from "lucide-react";
+import { Outlet, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Droplets, Grid3X3, Users, Briefcase, LogOut, CreditCard, LayoutDashboard, Cpu, Database } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -8,49 +8,35 @@ import { Button } from "@/components/ui/button";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import logoTesla from "@/assets/logo-tesla-energie.png";
 import {
-  SidebarProvider,
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarGroupContent,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarTrigger,
-  SidebarInset,
-  SidebarHeader,
-  SidebarFooter,
+  SidebarProvider, Sidebar, SidebarContent, SidebarGroup, SidebarGroupLabel,
+  SidebarGroupContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton,
+  SidebarTrigger, SidebarInset, SidebarHeader, SidebarFooter,
 } from "@/components/ui/sidebar";
 
 const navItems = [
+  { titleKey: "nav.dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
   { titleKey: "nav.travail", url: "/admin/travail", icon: Briefcase },
   { titleKey: "nav.surfaces", url: "/admin/surfaces", icon: Grid3X3 },
-  { titleKey: "nav.plantes", url: "/admin/plantes", icon: Leaf },
-  { titleKey: "nav.vannes", url: "/admin/vannes", icon: Droplets },
-  { titleKey: "nav.typesPlante", url: "/admin/types-plante", icon: Workflow },
-  { titleKey: "nav.sols", url: "/admin/sols", icon: Mountain },
-  { titleKey: "nav.climats", url: "/admin/climats", icon: CloudSun },
-  { titleKey: "nav.clients", url: "/admin/clients", icon: Users },
+  { titleKey: "nav.donneesDetaillees", url: "/admin/donnees-detaillees", icon: Database },
+  { titleKey: "nav.capteurs", url: "/admin/capteurs", icon: Cpu },
+  { titleKey: "nav.users", url: "/admin/users", icon: Users },
   { titleKey: "nav.subscriptions", url: "/admin/subscriptions", icon: CreditCard },
-  { titleKey: "nav.wizard", url: "/admin/wizard", icon: FileStack },
 ];
 
 const pageTitleKeys: Record<string, string> = {
+  "/admin/dashboard": "nav.dashboard",
   "/admin/travail": "nav.travail",
   "/admin/surfaces": "nav.surfaces",
-  "/admin/plantes": "nav.plantes",
-  "/admin/vannes": "nav.vannes",
-  "/admin/types-plante": "nav.typesPlante",
-  "/admin/sols": "nav.sols",
-  "/admin/climats": "nav.climats",
-  "/admin/clients": "nav.clients",
-  "/admin/wizard": "nav.wizard",
+  "/admin/donnees-detaillees": "nav.donneesDetaillees",
+  "/admin/capteurs": "nav.capteurs",
+  "/admin/users": "nav.users",
   "/admin/subscriptions": "nav.subscriptions",
+  "/admin/profile": "nav.profile",
 };
 
 export default function AdminLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, profile, loading, signOut } = useAuth();
   const { t } = useLanguage();
   const titleKey = pageTitleKeys[location.pathname];
@@ -64,12 +50,10 @@ export default function AdminLayout() {
     );
   }
 
-  if (!user) {
-    return <Navigate to="/auth/login" replace />;
-  }
+  if (!user) return <Navigate to="/auth/login" replace />;
 
   if (location.pathname === "/admin" || location.pathname === "/admin/") {
-    return <Navigate to="/admin/travail" replace />;
+    return <Navigate to="/admin/dashboard" replace />;
   }
 
   const displayName = profile?.first_name
@@ -92,7 +76,10 @@ export default function AdminLayout() {
                 <span className="text-[10px] font-semibold tracking-[0.25em] text-primary">ENERGIE</span>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div
+              className="flex items-center gap-2 cursor-pointer hover:bg-sidebar-accent/50 rounded-lg p-1.5 -mx-1.5 transition-colors"
+              onClick={() => navigate("/admin/profile")}
+            >
               <Avatar className="h-8 w-8">
                 <AvatarImage src={profile?.avatar_url ?? undefined} />
                 <AvatarFallback className="text-xs bg-primary/10 text-primary">{initials}</AvatarFallback>
@@ -111,12 +98,7 @@ export default function AdminLayout() {
                   {navItems.map((item) => (
                     <SidebarMenuItem key={item.titleKey}>
                       <SidebarMenuButton asChild>
-                        <NavLink
-                          to={item.url}
-                          end
-                          className="hover:bg-sidebar-accent/50"
-                          activeClassName="bg-primary/10 text-primary font-medium"
-                        >
+                        <NavLink to={item.url} end className="hover:bg-sidebar-accent/50" activeClassName="bg-primary/10 text-primary font-medium">
                           <item.icon className="mr-2 h-4 w-4" />
                           <span>{t(item.titleKey)}</span>
                         </NavLink>
