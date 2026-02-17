@@ -150,3 +150,39 @@ export const deleteClimat = async (id: string): Promise<void> => {
   const idx = climats.findIndex((c) => c.id === id);
   if (idx !== -1) climats.splice(idx, 1);
 };
+
+// ─── Update functions ──────────────────────────────
+export const updateTypePlante = async (id: string, data: Partial<TypePlante>): Promise<TypePlante | null> => {
+  const idx = typesPlante.findIndex((t) => t.id === id);
+  if (idx === -1) return null;
+  typesPlante[idx] = { ...typesPlante[idx], ...data };
+  return typesPlante[idx];
+};
+
+export const updatePlante = async (id: string, data: Partial<Plante>): Promise<Plante | null> => {
+  const idx = plantes.findIndex((p) => p.id === id);
+  if (idx === -1) return null;
+  plantes[idx] = { ...plantes[idx], ...data };
+  return plantes[idx];
+};
+
+export const updateVanne = async (id: string, data: Partial<Vanne>): Promise<Vanne | null> => {
+  const idx = vannes.findIndex((v) => v.id === id);
+  if (idx === -1) return null;
+  vannes[idx] = { ...vannes[idx], ...data };
+  return vannes[idx];
+};
+
+export const updateSol = async (id: string, data: Partial<Sol>): Promise<Sol | null> => {
+  const idx = sols.findIndex((s) => s.id === id);
+  if (idx === -1) return null;
+  sols[idx] = { ...sols[idx], ...data };
+  return sols[idx];
+};
+
+export const updateClimat = async (id: string, data: Partial<Climat>): Promise<Climat | null> => {
+  const idx = climats.findIndex((c) => c.id === id);
+  if (idx === -1) return null;
+  climats[idx] = { ...climats[idx], ...data };
+  return climats[idx];
+};

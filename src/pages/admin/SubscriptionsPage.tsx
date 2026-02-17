@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Pencil, CreditCard, Plus } from "lucide-react";
+import { Pencil, CreditCard, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Client } from "@/types/models";
 
@@ -28,7 +28,12 @@ export default function SubscriptionsPage() {
 
   const updateMut = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<Client> }) => updateClient(id, data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["clients"] }); setEditing(null); toast({ title: "Abonnement mis à jour" }); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["clients"] }); setEditing(null); toast({ title: t("sub.updated") }); },
+  });
+
+  const removeMut = useMutation({
+    mutationFn: (id: string) => updateClient(id, { dateDebAbo: undefined, dateExpAbo: undefined, typeAbo: undefined }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["clients"] }); toast({ title: t("sub.removed") }); },
   });
 
   const handleSave = (e: React.FormEvent<HTMLFormElement>) => {
@@ -60,12 +65,12 @@ export default function SubscriptionsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Client</TableHead>
+                <TableHead>{t("users.title")}</TableHead>
                 <TableHead>{t("sub.type")}</TableHead>
                 <TableHead>{t("sub.start")}</TableHead>
                 <TableHead>{t("sub.end")}</TableHead>
-                <TableHead>Statut</TableHead>
-                <TableHead className="w-16">{t("common.actions")}</TableHead>
+                <TableHead>{t("common.status")}</TableHead>
+                <TableHead className="w-24">{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -79,9 +84,12 @@ export default function SubscriptionsPage() {
                     <TableCell>{c.dateExpAbo ?? "—"}</TableCell>
                     <TableCell><Badge variant={status.variant}>{status.label}</Badge></TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm" onClick={() => setEditing(c)}>
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => setEditing(c)}><Pencil className="h-3 w-3" /></Button>
+                        {c.typeAbo && (
+                          <Button variant="ghost" size="sm" className="text-destructive" onClick={() => removeMut.mutate(c.id)}><Trash2 className="h-3 w-3" /></Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
