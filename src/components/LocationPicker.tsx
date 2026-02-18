@@ -1,22 +1,10 @@
-import { useState, useEffect, useRef } from "react";
-import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { MapPin, Search } from "lucide-react";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
+import { MapPin, Search, Loader2 } from "lucide-react";
 
-// Custom marker icon to avoid default icon issues
-const markerIcon = new L.Icon({
-  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
-  iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
-  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
+const LazyMap = lazy(() => import("@/components/LeafletMap"));
 
 interface LocationPickerProps {
   value: string;
@@ -24,18 +12,9 @@ interface LocationPickerProps {
   placeholder?: string;
 }
 
-function MapClickHandler({ onLocationSelect }: { onLocationSelect: (lat: number, lng: number) => void }) {
-  useMapEvents({
-    click(e) {
-      onLocationSelect(e.latlng.lat, e.latlng.lng);
-    },
-  });
-  return null;
-}
-
 export default function LocationPicker({ value, onChange, placeholder = "Localisation" }: LocationPickerProps) {
   const [open, setOpen] = useState(false);
-  const [position, setPosition] = useState<[number, number]>([36.8, 10.18]); // default Tunis
+  const [position, setPosition] = useState<[number, number]>([36.8, 10.18]);
   const [searchQuery, setSearchQuery] = useState("");
   const [addressLabel, setAddressLabel] = useState(value);
 
@@ -87,6 +66,7 @@ export default function LocationPicker({ value, onChange, placeholder = "Localis
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Choisir la localisation</DialogTitle>
+              <DialogDescription>Cliquez sur la carte ou recherchez un lieu pour sélectionner la localisation.</DialogDescription>
             </DialogHeader>
             <div className="flex gap-2 mb-3">
               <Input
@@ -100,14 +80,11 @@ export default function LocationPicker({ value, onChange, placeholder = "Localis
               </Button>
             </div>
             <div className="h-[400px] rounded-lg overflow-hidden border">
-              <MapContainer center={position} zoom={8} style={{ height: "100%", width: "100%" }}>
-                <TileLayer
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                />
-                <Marker position={position} icon={markerIcon} />
-                <MapClickHandler onLocationSelect={handleLocationSelect} />
-              </MapContainer>
+              {open && (
+                <Suspense fallback={<div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>}>
+                  <LazyMap position={position} onLocationSelect={handleLocationSelect} />
+                </Suspense>
+              )}
             </div>
             <div className="flex justify-end mt-2">
               <Button onClick={() => setOpen(false)}>Confirmer</Button>
