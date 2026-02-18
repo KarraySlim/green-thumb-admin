@@ -111,7 +111,7 @@ export default function SignupPage() {
                 <Select value={city} onValueChange={setCity}>
                   <SelectTrigger><MapPin className="mr-2 h-4 w-4 text-muted-foreground" /><SelectValue placeholder={t("auth.city")} /></SelectTrigger>
                   <SelectContent>
-                    {(selectedCountry?.cities ?? []).map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    {(selectedCountry?.governorates.flatMap((g) => g.cities) ?? []).map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
