@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { DeleteDialog } from "@/components/DeleteDialog";
 import { toast } from "@/hooks/use-toast";
 import { Plus, X, Pencil } from "lucide-react";
-import LocationPicker from "@/components/LocationPicker";
+import LocationSelector from "@/components/LocationSelector";
 import { Surface } from "@/types/models";
 
 export default function SurfacesPage() {
@@ -59,20 +59,19 @@ export default function SurfacesPage() {
         <Card>
           <CardHeader><CardTitle>Nouvelle surface</CardTitle></CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div><Label>Nom surface</Label><Input name="nomSurface" required /></div>
-              <div>
-                <Label>{t("surface.location")}</Label>
-                <LocationPicker value={localisation} onChange={setLocalisation} placeholder="Choisir localisation" />
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div><Label>Nom surface</Label><Input name="nomSurface" required /></div>
+                <div>
+                  <Label>{t("wizard.user")}</Label>
+                  <Select value={selectedClient} onValueChange={setSelectedClient}>
+                    <SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger>
+                    <SelectContent>{clientsList.map((c) => <SelectItem key={c.id} value={c.id}>{c.email}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div>
-                <Label>{t("wizard.user")}</Label>
-                <Select value={selectedClient} onValueChange={setSelectedClient}>
-                  <SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger>
-                  <SelectContent>{clientsList.map((c) => <SelectItem key={c.id} value={c.id}>{c.email}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div className="md:col-span-3"><Button type="submit" disabled={createMut.isPending || !selectedClient}>{t("common.create")}</Button></div>
+              <LocationSelector value={localisation} onChange={setLocalisation} />
+              <div><Button type="submit" disabled={createMut.isPending || !selectedClient}>{t("common.create")}</Button></div>
             </form>
           </CardContent>
         </Card>
@@ -113,10 +112,7 @@ export default function SurfacesPage() {
           <DialogHeader><DialogTitle>{t("surface.editSurface")}</DialogTitle></DialogHeader>
           <form onSubmit={(e) => { e.preventDefault(); if (!editing) return; const fd = new FormData(e.currentTarget); updateMut.mutate({ id: editing.id, data: { nomSurface: fd.get("nomSurface") as string, localisation: editLoc } }); }} className="space-y-4">
             <div><Label>Nom</Label><Input name="nomSurface" defaultValue={editing?.nomSurface} required /></div>
-            <div>
-              <Label>{t("surface.location")}</Label>
-              <LocationPicker value={editLoc} onChange={setEditLoc} />
-            </div>
+            <LocationSelector value={editLoc} onChange={setEditLoc} />
             <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setEditing(null)}>{t("common.cancel")}</Button><Button type="submit">{t("common.save")}</Button></div>
           </form>
         </DialogContent>
