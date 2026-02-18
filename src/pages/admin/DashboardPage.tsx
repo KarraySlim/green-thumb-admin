@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { getClients, getSurfaces, getVannes, getPlantes } from "@/services/data-service";
+import { getClients, getSurfaces } from "@/services/data-service";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Grid3X3, Droplets, Leaf, TrendingUp, AlertTriangle, CheckCircle } from "lucide-react";
+import { Users, Grid3X3, TrendingUp, AlertTriangle, CheckCircle } from "lucide-react";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
 const COLORS = ["hsl(145,63%,32%)", "hsl(145,63%,50%)", "hsl(140,30%,70%)", "hsl(0,84%,60%)"];
@@ -12,8 +12,6 @@ export default function DashboardPage() {
   const { t } = useLanguage();
   const { data: clients = [] } = useQuery({ queryKey: ["clients"], queryFn: getClients });
   const { data: surfaces = [] } = useQuery({ queryKey: ["surfaces"], queryFn: getSurfaces });
-  const { data: vannes = [] } = useQuery({ queryKey: ["vannes"], queryFn: getVannes });
-  const { data: plantes = [] } = useQuery({ queryKey: ["plantes"], queryFn: getPlantes });
 
   // Subscription distribution
   const subData = [
@@ -45,24 +43,14 @@ export default function DashboardPage() {
     return new Date(c.dateExpAbo).getTime() > now;
   }).length;
 
-  // Water consumption estimate
-  const totalDebit = vannes.reduce((sum, v) => sum + v.debitEauParVanne, 0);
-
   const stats = [
     { label: t("dashboard.totalUsers"), value: clients.length, icon: Users, color: "bg-blue-500/10 text-blue-600" },
     { label: t("dashboard.totalSurfaces"), value: surfaces.length, icon: Grid3X3, color: "bg-emerald-500/10 text-emerald-600" },
-    { label: t("dashboard.totalVannes"), value: vannes.length, icon: Droplets, color: "bg-cyan-500/10 text-cyan-600" },
-    { label: t("dashboard.totalPlantes"), value: plantes.length, icon: Leaf, color: "bg-green-500/10 text-green-600" },
   ];
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-foreground">{t("dashboard.title")}</h2>
-        <Badge variant="outline" className="text-xs gap-1">
-          <TrendingUp className="h-3 w-3" /> {totalDebit.toFixed(1)} L/h {t("dashboard.totalFlow")}
-        </Badge>
-      </div>
+      <h2 className="text-2xl font-bold text-foreground">{t("dashboard.title")}</h2>
 
       {/* Stats cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
