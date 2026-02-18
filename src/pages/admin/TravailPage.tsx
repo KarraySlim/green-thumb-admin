@@ -1,15 +1,16 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getClients, getSurfaces, getVannes, getTypesPlante, updateClient, updateSurface, createSurface, createPlante, createVanne } from "@/services/data-service";
+import LocationSelector from "@/components/LocationSelector";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Plus, Search, Wifi, WifiOff, Droplets, MapPin, Leaf, SlidersHorizontal, X, Pencil, CreditCard, ArrowRight, ArrowLeft, Save } from "lucide-react";
+import { Plus, Search, Wifi, WifiOff, Droplets, MapPin, Leaf, SlidersHorizontal, X, Pencil, CreditCard, ArrowRight, ArrowLeft, Save, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { Client, Surface } from "@/types/models";
@@ -213,15 +214,31 @@ function EditSurfaceDialog({ surface, onClose, onSave }: { surface: Surface | nu
   );
 }
 
+interface PlantEntry { nomPlante: string; age: number; fkTypePlante: string; }
+
 function NewProjectDialog({ open, onClose, clients, typesList, qc, t }: { open: boolean; onClose: () => void; clients: Client[]; typesList: any[]; qc: any; t: (k: string) => string }) {
+  // Step: 0 = question, 1 = surface & plante, 2 = vannes
   const [step, setStep] = useState(0);
+  const [samePlants, setSamePlants] = useState<boolean | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // Surface fields
   const [nomSurface, setNomSurface] = useState("");
   const [localisation, setLocalisation] = useState("");
   const [fkClient, setFkClient] = useState("");
+  const [nbPlanteTotal, setNbPlanteTotal] = useState(0);
+
+  // Single plant (samePlants = true)
   const [nomPlante, setNomPlante] = useState("");
   const [agePlante, setAgePlante] = useState(0);
   const [fkTypePlante, setFkTypePlante] = useState("");
+
+  // Multiple plants (samePlants = false)
+  const [plantEntries, setPlantEntries] = useState<PlantEntry[]>([
+    { nomPlante: "", age: 0, fkTypePlante: "" },
+  ]);
+
+  // Vannes
   const [nbVanne, setNbVanne] = useState(1);
   const [vannesData, setVannesData] = useState<VanneData[]>([{ nomVanne: "", nbPlantParVanne: 0, debitEauParVanne: 0 }]);
 
@@ -232,48 +249,102 @@ function NewProjectDialog({ open, onClose, clients, typesList, qc, t }: { open: 
     setVannesData(arr.slice(0, n));
   };
 
-  const canStep1 = nomSurface && localisation && fkClient && nomPlante && fkTypePlante;
+  const addPlantEntry = () => setPlantEntries([...plantEntries, { nomPlante: "", age: 0, fkTypePlante: "" }]);
+  const removePlantEntry = (idx: number) => setPlantEntries(plantEntries.filter((_, i) => i !== idx));
+  const updatePlantEntry = (idx: number, field: keyof PlantEntry, value: string | number) => {
+    const arr = [...plantEntries];
+    arr[idx] = { ...arr[idx], [field]: value };
+    setPlantEntries(arr);
+  };
+
+  const canStep1 = nomSurface && localisation && fkClient && nbVanne > 0 && (
+    samePlants
+      ? (nomPlante && fkTypePlante)
+      : plantEntries.every(p => p.nomPlante && p.fkTypePlante)
+  );
   const canStep2 = vannesData.every(v => v.nomVanne && v.debitEauParVanne > 0);
 
   const handleSave = async () => {
     setSaving(true);
     try {
       const surface = await createSurface({ nomSurface, localisation, fkClient });
-      await createPlante({ nomPlante, age: agePlante, fkTypePlante, fkSurface: surface.id });
+
+      if (samePlants) {
+        await createPlante({ nomPlante, age: agePlante, fkTypePlante, fkSurface: surface.id });
+      } else {
+        for (const p of plantEntries) {
+          await createPlante({ nomPlante: p.nomPlante, age: p.age, fkTypePlante: p.fkTypePlante, fkSurface: surface.id });
+        }
+      }
+
       for (const v of vannesData) {
         await createVanne({ nomVanne: v.nomVanne, nbPlantParVanne: v.nbPlantParVanne, debitEauParVanne: v.debitEauParVanne, fkSurface: surface.id });
       }
+
       qc.invalidateQueries({ queryKey: ["surfaces"] });
       qc.invalidateQueries({ queryKey: ["plantes"] });
       qc.invalidateQueries({ queryKey: ["vannes"] });
       toast({ title: t("wizard.success") });
       // Reset
-      setStep(0); setNomSurface(""); setLocalisation(""); setFkClient(""); setNomPlante(""); setAgePlante(0); setFkTypePlante(""); setNbVanne(1); setVannesData([{ nomVanne: "", nbPlantParVanne: 0, debitEauParVanne: 0 }]);
+      setStep(0); setSamePlants(null); setNomSurface(""); setLocalisation(""); setFkClient(""); setNomPlante(""); setAgePlante(0); setFkTypePlante(""); setNbVanne(1); setNbPlanteTotal(0);
+      setVannesData([{ nomVanne: "", nbPlantParVanne: 0, debitEauParVanne: 0 }]);
+      setPlantEntries([{ nomPlante: "", age: 0, fkTypePlante: "" }]);
       onClose();
     } catch { toast({ title: "Erreur", variant: "destructive" }); } finally { setSaving(false); }
   };
 
+  const stepLabels = [t("wizard.step0"), t("wizard.step1"), t("wizard.step2")];
+
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>{t("travail.newProject")}</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>{t("travail.newProject")}</DialogTitle>
+          <DialogDescription>{stepLabels[step]}</DialogDescription>
+        </DialogHeader>
 
         {/* Stepper */}
         <div className="flex items-center gap-2 mb-4">
-          {[t("wizard.step1"), t("wizard.step2")].map((label, i) => (
+          {stepLabels.map((label, i) => (
             <div key={i} className="flex items-center gap-2">
               <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${i === step ? "bg-primary text-primary-foreground" : i < step ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"}`}>{i + 1}</div>
               <span className={`text-sm ${i === step ? "font-semibold" : "text-muted-foreground"}`}>{label}</span>
-              {i < 1 && <div className="w-6 h-px bg-border" />}
+              {i < stepLabels.length - 1 && <div className="w-6 h-px bg-border" />}
             </div>
           ))}
         </div>
 
+        {/* Step 0: Question */}
         {step === 0 && (
+          <div className="space-y-6 py-4">
+            <p className="text-base font-medium text-foreground text-center">{t("wizard.sameAgetype")}</p>
+            <div className="flex justify-center gap-4">
+              <Button
+                variant={samePlants === true ? "default" : "outline"}
+                size="lg"
+                className="min-w-[120px]"
+                onClick={() => { setSamePlants(true); setStep(1); }}
+              >
+                {t("common.yes")}
+              </Button>
+              <Button
+                variant={samePlants === false ? "default" : "outline"}
+                size="lg"
+                className="min-w-[120px]"
+                onClick={() => { setSamePlants(false); setStep(1); }}
+              >
+                {t("common.no")}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 1: Surface & Plante */}
+        {step === 1 && (
           <div className="space-y-4">
+            {/* Surface info */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div><Label>{t("wizard.surfaceName")}</Label><Input value={nomSurface} onChange={e => setNomSurface(e.target.value)} required /></div>
-              <div><Label>{t("wizard.location")}</Label><LocationPicker value={localisation} onChange={setLocalisation} /></div>
               <div>
                 <Label>{t("wizard.user")}</Label>
                 <Select value={fkClient} onValueChange={setFkClient}>
@@ -281,22 +352,78 @@ function NewProjectDialog({ open, onClose, clients, typesList, qc, t }: { open: 
                   <SelectContent>{clients.map(c => <SelectItem key={c.id} value={c.id}>{c.email}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div><Label>{t("wizard.plantName")}</Label><Input value={nomPlante} onChange={e => setNomPlante(e.target.value)} required /></div>
-              <div><Label>{t("wizard.plantAge")}</Label><Input type="number" min="0" value={agePlante} onChange={e => setAgePlante(parseInt(e.target.value) || 0)} /></div>
-              <div>
-                <Label>{t("wizard.plantType")}</Label>
-                <Select value={fkTypePlante} onValueChange={setFkTypePlante}>
-                  <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                  <SelectContent>{typesList.map(tp => <SelectItem key={tp.id} value={tp.id}>{tp.nomPlante}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
+            </div>
+
+            {/* Location selector */}
+            <div>
+              <Label className="mb-2 block">{t("wizard.location")}</Label>
+              <LocationSelector value={localisation} onChange={setLocalisation} />
+            </div>
+
+            {/* Nombre total plantes */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div><Label>{t("wizard.nbPlanteTotal")}</Label><Input type="number" min="0" value={nbPlanteTotal} onChange={e => setNbPlanteTotal(parseInt(e.target.value) || 0)} /></div>
               <div><Label>{t("wizard.nbVannes")}</Label><Input type="number" min="1" value={nbVanne} onChange={e => updateNbVanne(Math.max(1, parseInt(e.target.value) || 1))} /></div>
             </div>
-            <div className="flex justify-end"><Button onClick={() => setStep(1)} disabled={!canStep1}>{t("wizard.next")} <ArrowRight className="ml-2 h-4 w-4" /></Button></div>
+
+            {/* Plants section */}
+            {samePlants ? (
+              /* Single plant */
+              <div className="border rounded-lg p-4 space-y-3">
+                <h4 className="font-semibold text-sm text-foreground">{t("wizard.plantName")}</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div><Label>{t("wizard.plantName")}</Label><Input value={nomPlante} onChange={e => setNomPlante(e.target.value)} required /></div>
+                  <div><Label>{t("wizard.plantAge")}</Label><Input type="number" min="0" value={agePlante} onChange={e => setAgePlante(parseInt(e.target.value) || 0)} /></div>
+                  <div>
+                    <Label>{t("wizard.plantType")}</Label>
+                    <Select value={fkTypePlante} onValueChange={setFkTypePlante}>
+                      <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                      <SelectContent>{typesList.map(tp => <SelectItem key={tp.id} value={tp.id}>{tp.nomPlante}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* Multiple plants */
+              <div className="space-y-3">
+                {plantEntries.map((p, i) => (
+                  <div key={i} className="border rounded-lg p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-semibold text-sm text-foreground">{t("wizard.plantName")} {i + 1}</h4>
+                      {plantEntries.length > 1 && (
+                        <Button variant="ghost" size="sm" onClick={() => removePlantEntry(i)} className="text-destructive h-7 px-2">
+                          <Trash2 className="h-3 w-3 mr-1" /> {t("wizard.removePlant")}
+                        </Button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div><Label>{t("wizard.plantName")}</Label><Input value={p.nomPlante} onChange={e => updatePlantEntry(i, "nomPlante", e.target.value)} required /></div>
+                      <div><Label>{t("wizard.plantAge")}</Label><Input type="number" min="0" value={p.age} onChange={e => updatePlantEntry(i, "age", parseInt(e.target.value) || 0)} /></div>
+                      <div>
+                        <Label>{t("wizard.plantType")}</Label>
+                        <Select value={p.fkTypePlante} onValueChange={v => updatePlantEntry(i, "fkTypePlante", v)}>
+                          <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                          <SelectContent>{typesList.map(tp => <SelectItem key={tp.id} value={tp.id}>{tp.nomPlante}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                <Button variant="outline" size="sm" onClick={addPlantEntry} className="w-full">
+                  <Plus className="h-4 w-4 mr-1" /> {t("wizard.addPlant")}
+                </Button>
+              </div>
+            )}
+
+            <div className="flex justify-between">
+              <Button variant="outline" onClick={() => setStep(0)}><ArrowLeft className="mr-2 h-4 w-4" /> {t("wizard.prev")}</Button>
+              <Button onClick={() => setStep(2)} disabled={!canStep1}>{t("wizard.next")} <ArrowRight className="ml-2 h-4 w-4" /></Button>
+            </div>
           </div>
         )}
 
-        {step === 1 && (
+        {/* Step 2: Vannes */}
+        {step === 2 && (
           <div className="space-y-4">
             {vannesData.map((v, i) => (
               <div key={i} className="border rounded-lg p-3 space-y-3">
@@ -309,7 +436,7 @@ function NewProjectDialog({ open, onClose, clients, typesList, qc, t }: { open: 
               </div>
             ))}
             <div className="flex justify-between">
-              <Button variant="outline" onClick={() => setStep(0)}><ArrowLeft className="mr-2 h-4 w-4" /> {t("wizard.prev")}</Button>
+              <Button variant="outline" onClick={() => setStep(1)}><ArrowLeft className="mr-2 h-4 w-4" /> {t("wizard.prev")}</Button>
               <Button onClick={handleSave} disabled={saving || !canStep2}><Save className="mr-2 h-4 w-4" /> {saving ? t("wizard.saving") : t("common.save")}</Button>
             </div>
           </div>
