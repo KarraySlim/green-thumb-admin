@@ -14,6 +14,69 @@ export type Database = {
   }
   public: {
     Tables: {
+      clients: {
+        Row: {
+          avatar_url: string | null
+          city: string | null
+          country: string | null
+          created_at: string
+          date_deb_abo: string | null
+          date_exp_abo: string | null
+          date_of_birth: string | null
+          email: string
+          first_name: string | null
+          id: string
+          last_name: string | null
+          location: string | null
+          phone_number: string | null
+          preferences: Json | null
+          role: string
+          type_abo: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          date_deb_abo?: string | null
+          date_exp_abo?: string | null
+          date_of_birth?: string | null
+          email: string
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          location?: string | null
+          phone_number?: string | null
+          preferences?: Json | null
+          role?: string
+          type_abo?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          date_deb_abo?: string | null
+          date_exp_abo?: string | null
+          date_of_birth?: string | null
+          email?: string
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          location?: string | null
+          phone_number?: string | null
+          preferences?: Json | null
+          role?: string
+          type_abo?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -41,6 +104,33 @@ export type Database = {
           last_name?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      subscription_notifications: {
+        Row: {
+          client_email: string
+          client_name: string
+          created_at: string
+          days_remaining: number
+          id: string
+          sent_at: string
+        }
+        Insert: {
+          client_email: string
+          client_name: string
+          created_at?: string
+          days_remaining: number
+          id?: string
+          sent_at?: string
+        }
+        Update: {
+          client_email?: string
+          client_name?: string
+          created_at?: string
+          days_remaining?: number
+          id?: string
+          sent_at?: string
         }
         Relationships: []
       }
