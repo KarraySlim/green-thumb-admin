@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { getClients, getSurfaces } from "@/services/data-service";
+import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Grid3X3, TrendingUp, AlertTriangle, CheckCircle } from "lucide-react";
+import { Users, Grid3X3, AlertTriangle, CheckCircle, Bell, ShieldCheck } from "lucide-react";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
 const COLORS = ["hsl(145,63%,32%)", "hsl(145,63%,50%)", "hsl(140,30%,70%)", "hsl(0,84%,60%)"];
@@ -12,6 +13,13 @@ export default function DashboardPage() {
   const { t } = useLanguage();
   const { data: clients = [] } = useQuery({ queryKey: ["clients"], queryFn: getClients });
   const { data: surfaces = [] } = useQuery({ queryKey: ["surfaces"], queryFn: getSurfaces });
+  const { data: notifications = [] } = useQuery({
+    queryKey: ["subscription_notifications"],
+    queryFn: async () => {
+      const { data } = await supabase.from("subscription_notifications").select("*").order("sent_at", { ascending: false }).limit(50);
+      return data ?? [];
+    },
+  });
 
   // Subscription distribution
   const subData = [
@@ -46,6 +54,8 @@ export default function DashboardPage() {
   const stats = [
     { label: t("dashboard.totalUsers"), value: clients.length, icon: Users, color: "bg-blue-500/10 text-blue-600" },
     { label: t("dashboard.totalSurfaces"), value: surfaces.length, icon: Grid3X3, color: "bg-emerald-500/10 text-emerald-600" },
+    { label: t("dashboard.activeSubscriptions"), value: activeCount, icon: ShieldCheck, color: "bg-green-500/10 text-green-600" },
+    { label: t("dashboard.notificationsSent"), value: notifications.length, icon: Bell, color: "bg-violet-500/10 text-violet-600" },
   ];
 
   return (
