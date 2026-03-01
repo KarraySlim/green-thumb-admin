@@ -107,6 +107,89 @@ export type Database = {
         }
         Relationships: []
       }
+      soil_reports: {
+        Row: {
+          argile: number | null
+          azote: number | null
+          bore: number | null
+          calcium: number | null
+          cec: number | null
+          client_id: string
+          conductivite: number | null
+          created_at: string
+          cuivre: number | null
+          fer: number | null
+          id: string
+          limon: number | null
+          magnesium: number | null
+          manganese: number | null
+          matiere_organique: number | null
+          ph: number | null
+          phosphore: number | null
+          potassium: number | null
+          report_type: string
+          sable: number | null
+          sodium: number | null
+          zinc: number | null
+        }
+        Insert: {
+          argile?: number | null
+          azote?: number | null
+          bore?: number | null
+          calcium?: number | null
+          cec?: number | null
+          client_id: string
+          conductivite?: number | null
+          created_at?: string
+          cuivre?: number | null
+          fer?: number | null
+          id?: string
+          limon?: number | null
+          magnesium?: number | null
+          manganese?: number | null
+          matiere_organique?: number | null
+          ph?: number | null
+          phosphore?: number | null
+          potassium?: number | null
+          report_type: string
+          sable?: number | null
+          sodium?: number | null
+          zinc?: number | null
+        }
+        Update: {
+          argile?: number | null
+          azote?: number | null
+          bore?: number | null
+          calcium?: number | null
+          cec?: number | null
+          client_id?: string
+          conductivite?: number | null
+          created_at?: string
+          cuivre?: number | null
+          fer?: number | null
+          id?: string
+          limon?: number | null
+          magnesium?: number | null
+          manganese?: number | null
+          matiere_organique?: number | null
+          ph?: number | null
+          phosphore?: number | null
+          potassium?: number | null
+          report_type?: string
+          sable?: number | null
+          sodium?: number | null
+          zinc?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "soil_reports_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscription_notifications: {
         Row: {
           client_email: string
