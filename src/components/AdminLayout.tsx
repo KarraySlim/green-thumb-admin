@@ -1,5 +1,5 @@
 import { Outlet, Navigate, useLocation, useNavigate } from "react-router-dom";
-import { Droplets, Grid3X3, Users, Briefcase, LogOut, CreditCard, LayoutDashboard, Cpu, Database } from "lucide-react";
+import { Droplets, Grid3X3, Users, Briefcase, LogOut, CreditCard, LayoutDashboard, Cpu, Database, FlaskConical } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -21,6 +21,7 @@ const navItems = [
   { titleKey: "nav.capteurs", url: "/admin/capteurs", icon: Cpu },
   { titleKey: "nav.users", url: "/admin/users", icon: Users },
   { titleKey: "nav.subscriptions", url: "/admin/subscriptions", icon: CreditCard },
+  { titleKey: "nav.rapportSol", url: "/admin/rapport-sol", icon: FlaskConical },
 ];
 
 const pageTitleKeys: Record<string, string> = {
@@ -31,6 +32,7 @@ const pageTitleKeys: Record<string, string> = {
   "/admin/capteurs": "nav.capteurs",
   "/admin/users": "nav.users",
   "/admin/subscriptions": "nav.subscriptions",
+  "/admin/rapport-sol": "nav.rapportSol",
   "/admin/profile": "nav.profile",
 };
 
