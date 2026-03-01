@@ -3,13 +3,12 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { getClients } from "@/services/data-service";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { DeleteDialog } from "@/components/DeleteDialog";
-import { Search, FlaskConical, Layers, Atom, ArrowLeft, Plus, User } from "lucide-react";
+import { Search, ArrowLeft, Plus, Eye, FileText, Calendar } from "lucide-react";
 import {
   interpretPH, interpretCE, interpretMO, interpretAzote, interpretPhosphore,
   interpretPotassium, interpretCalcium, interpretMagnesium, interpretSodium,
@@ -17,14 +16,7 @@ import {
   interpretBore, interpretGranulo,
 } from "@/utils/soil-interpretations";
 
-type ReportType = "physico_chimique" | "granulometrique" | "oligo_elements";
 type View = "users" | "history" | "form" | "result";
-
-const NAV_ITEMS: { key: ReportType; label: string; icon: typeof FlaskConical }[] = [
-  { key: "physico_chimique", label: "Analyses Physico-Chimiques", icon: FlaskConical },
-  { key: "granulometrique", label: "Analyse Granulométrique", icon: Layers },
-  { key: "oligo_elements", label: "Analyse des oligo-éléments", icon: Atom },
-];
 
 interface SoilReport {
   id: string;
@@ -51,22 +43,153 @@ interface SoilReport {
   bore: number | null;
 }
 
-function InterpretBadge({ label, color }: { label: string; color: string }) {
-  return <span className={`text-xs font-semibold px-2 py-0.5 rounded-full bg-muted ${color}`}>{label}</span>;
+/* ── Physico-chimique table config ── */
+const PHYSICO_FIELDS = [
+  { name: "ph", label: "pH (eau)", unit: "—", method: "ISO 10390", interp: interpretPH },
+  { name: "conductivite", label: "Conductivité (CE)", unit: "mS/cm", method: "ISO 11265", interp: interpretCE },
+  { name: "matiere_organique", label: "Matière organique", unit: "%", method: "Walkley-Black", interp: interpretMO },
+  { name: "azote", label: "Azote total (N)", unit: "%", method: "Kjeldahl", interp: interpretAzote },
+  { name: "phosphore", label: "Phosphore assimilable (P₂O₅)", unit: "mg/kg", method: "Olsen", interp: interpretPhosphore },
+  { name: "potassium", label: "Potassium échangeable (K₂O)", unit: "mg/kg", method: "Ammonium acétate", interp: interpretPotassium },
+  { name: "calcium", label: "Calcium (Ca²⁺)", unit: "mg/kg", method: "ICP", interp: interpretCalcium },
+  { name: "magnesium", label: "Magnésium (Mg²⁺)", unit: "mg/kg", method: "ICP", interp: interpretMagnesium },
+  { name: "sodium", label: "Sodium (Na⁺)", unit: "mg/kg", method: "ICP", interp: interpretSodium },
+  { name: "cec", label: "CEC", unit: "meq/100g", method: "Ammonium acétate", interp: interpretCEC },
+];
+
+const OLIGO_FIELDS = [
+  { name: "fer", label: "Fer (Fe)", unit: "mg/kg", interp: interpretFer },
+  { name: "zinc", label: "Zinc (Zn)", unit: "mg/kg", interp: interpretZinc },
+  { name: "cuivre", label: "Cuivre (Cu)", unit: "mg/kg", interp: interpretCuivre },
+  { name: "manganese", label: "Manganèse (Mn)", unit: "mg/kg", interp: interpretManganese },
+  { name: "bore", label: "Bore (B)", unit: "mg/kg", interp: interpretBore },
+];
+
+const GRANULO_FIELDS = [
+  { name: "sable", label: "Sable" },
+  { name: "limon", label: "Limon" },
+  { name: "argile", label: "Argile" },
+];
+
+function SectionBadge({ num }: { num: number }) {
+  return (
+    <span className="inline-flex items-center justify-center h-6 w-6 rounded bg-emerald-600 text-white text-xs font-bold mr-2">
+      {num}
+    </span>
+  );
 }
 
-function ResultRow({ num, label, value, unit, interp }: { num: number; label: string; value: number | null; unit: string; interp: { label: string; color: string } | null }) {
-  if (value == null) return null;
+/* ── Result display (all sections in one view) ── */
+function ReportResultView({ r }: { r: SoilReport }) {
   return (
-    <div className="flex items-center justify-between py-2 border-b last:border-0">
-      <div className="flex items-center gap-2">
-        <span className="text-sm font-bold text-emerald-600">{num}.</span>
-        <span className="text-sm font-medium">{label}</span>
-      </div>
-      <div className="flex items-center gap-3">
-        <span className="text-sm text-muted-foreground">{value} {unit}</span>
-        {interp && <InterpretBadge label={interp.label} color={interp.color} />}
-      </div>
+    <div className="space-y-8">
+      {/* Physico-chimique */}
+      <Card>
+        <CardContent className="p-6">
+          <h3 className="text-lg font-semibold mb-4 flex items-center">
+            <SectionBadge num={2} />Analyses Physico-Chimiques
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-2 text-muted-foreground font-medium">Paramètre</th>
+                  <th className="text-left py-2 text-muted-foreground font-medium">Résultat</th>
+                  <th className="text-left py-2 text-muted-foreground font-medium">Unité</th>
+                  <th className="text-left py-2 text-muted-foreground font-medium">Méthode</th>
+                  <th className="text-left py-2 text-muted-foreground font-medium">Interprétation</th>
+                </tr>
+              </thead>
+              <tbody>
+                {PHYSICO_FIELDS.map((f) => {
+                  const val = (r as any)[f.name] as number | null;
+                  const interp = val != null ? f.interp(val) : null;
+                  return (
+                    <tr key={f.name} className="border-b last:border-0">
+                      <td className="py-3 text-emerald-700 font-medium">{f.label}</td>
+                      <td className="py-3">{val ?? "—"}</td>
+                      <td className="py-3 text-muted-foreground">{f.unit}</td>
+                      <td className="py-3 text-muted-foreground">{f.method}</td>
+                      <td className={`py-3 font-semibold ${interp?.color ?? ""}`}>{interp?.label ?? "—"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Granulométrique */}
+      <Card>
+        <CardContent className="p-6">
+          <h3 className="text-lg font-semibold mb-4 flex items-center">
+            <SectionBadge num={3} />Analyse Granulométrique
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm max-w-md">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-2 text-muted-foreground font-medium">Fraction</th>
+                  <th className="text-left py-2 text-muted-foreground font-medium">%</th>
+                </tr>
+              </thead>
+              <tbody>
+                {GRANULO_FIELDS.map((f) => {
+                  const val = (r as any)[f.name] as number | null;
+                  return (
+                    <tr key={f.name} className="border-b last:border-0">
+                      <td className="py-3 text-emerald-700 font-medium">{f.label}</td>
+                      <td className="py-3">{val ?? "—"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          {r.argile != null && r.limon != null && r.sable != null && (
+            <p className="mt-4 text-sm">
+              <span className="font-semibold">Classe texturale : </span>
+              <span className="text-emerald-600 font-bold">{interpretGranulo(r.argile, r.limon, r.sable)}</span>
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Oligo-éléments */}
+      <Card>
+        <CardContent className="p-6">
+          <h3 className="text-lg font-semibold mb-4 flex items-center">
+            <SectionBadge num={4} />Analyse des oligo-éléments
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-2 text-muted-foreground font-medium">Élément</th>
+                  <th className="text-left py-2 text-muted-foreground font-medium">Résultat</th>
+                  <th className="text-left py-2 text-muted-foreground font-medium">Unité</th>
+                  <th className="text-left py-2 text-muted-foreground font-medium">Interprétation</th>
+                </tr>
+              </thead>
+              <tbody>
+                {OLIGO_FIELDS.map((f) => {
+                  const val = (r as any)[f.name] as number | null;
+                  const interp = val != null ? f.interp(val) : null;
+                  return (
+                    <tr key={f.name} className="border-b last:border-0">
+                      <td className="py-3 text-emerald-700 font-medium">{f.label}</td>
+                      <td className="py-3">{val ?? "—"}</td>
+                      <td className="py-3 text-muted-foreground">{f.unit}</td>
+                      <td className={`py-3 font-semibold ${interp?.color ?? ""}`}>{interp?.label ?? "—"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -75,10 +198,9 @@ export default function RapportSolPage() {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [view, setView] = useState<View>("users");
-  const [activeTab, setActiveTab] = useState<ReportType>("physico_chimique");
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [lastReport, setLastReport] = useState<SoilReport | null>(null);
+  const [viewingReportId, setViewingReportId] = useState<string | null>(null);
 
   const { data: clients = [] } = useQuery({ queryKey: ["clients"], queryFn: getClients });
   const { data: reports = [] } = useQuery({
@@ -102,9 +224,9 @@ export default function RapportSolPage() {
     },
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["soil_reports"] });
-      setLastReport(data);
+      setViewingReportId(data.id);
       setView("result");
-      toast({ title: "Rapport créé" });
+      toast({ title: "Rapport enregistré" });
     },
   });
 
@@ -121,85 +243,24 @@ export default function RapportSolPage() {
     [reports, selectedClientId]
   );
 
+  const viewingReport = reports.find((r) => r.id === viewingReportId) ?? null;
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    const num = (k: string) => { const v = fd.get(k); return v ? parseFloat(v as string) : null; };
-    const payload: Record<string, unknown> = {
+    const num = (k: string) => { const v = fd.get(k); return v && (v as string).trim() !== "" ? parseFloat(v as string) : null; };
+    createMut.mutate({
       client_id: selectedClientId,
-      report_type: activeTab,
-    };
-    if (activeTab === "physico_chimique") {
-      Object.assign(payload, { ph: num("ph"), conductivite: num("conductivite"), matiere_organique: num("matiere_organique"), azote: num("azote"), phosphore: num("phosphore"), potassium: num("potassium"), calcium: num("calcium"), magnesium: num("magnesium"), sodium: num("sodium"), cec: num("cec") });
-    } else if (activeTab === "granulometrique") {
-      Object.assign(payload, { argile: num("argile"), limon: num("limon"), sable: num("sable") });
-    } else {
-      Object.assign(payload, { fer: num("fer"), zinc: num("zinc"), cuivre: num("cuivre"), manganese: num("manganese"), bore: num("bore") });
-    }
-    createMut.mutate(payload);
+      report_type: "full",
+      ph: num("ph"), conductivite: num("conductivite"), matiere_organique: num("matiere_organique"),
+      azote: num("azote"), phosphore: num("phosphore"), potassium: num("potassium"),
+      calcium: num("calcium"), magnesium: num("magnesium"), sodium: num("sodium"), cec: num("cec"),
+      argile: num("argile"), limon: num("limon"), sable: num("sable"),
+      fer: num("fer"), zinc: num("zinc"), cuivre: num("cuivre"), manganese: num("manganese"), bore: num("bore"),
+    });
   };
 
-  const renderReportResult = (r: SoilReport) => {
-    const client = clients.find((c) => c.id === r.client_id);
-    const typeLabelMap: Record<string, string> = { physico_chimique: "Analyses Physico-Chimiques", granulometrique: "Analyse Granulométrique", oligo_elements: "Analyse des oligo-éléments" };
-    return (
-      <Card key={r.id} className="mb-4">
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <User className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-semibold">{client ? `${client.firstName} ${client.lastName}` : "—"}</span>
-              </div>
-              <CardTitle className="text-base">{typeLabelMap[r.report_type] ?? r.report_type}</CardTitle>
-              <p className="text-xs text-muted-foreground">{new Date(r.created_at).toLocaleString()}</p>
-            </div>
-            <DeleteDialog onConfirm={() => deleteMut.mutate(r.id)} itemName="ce rapport" />
-          </div>
-        </CardHeader>
-        <CardContent>
-          {r.report_type === "physico_chimique" && (
-            <div className="space-y-0">
-              <ResultRow num={1} label="pH (eau) — ISO 10390" value={r.ph} unit="" interp={r.ph != null ? interpretPH(r.ph) : null} />
-              <ResultRow num={2} label="Conductivité électrique (CE)" value={r.conductivite} unit="mS/cm" interp={r.conductivite != null ? interpretCE(r.conductivite) : null} />
-              <ResultRow num={3} label="Matière organique" value={r.matiere_organique} unit="%" interp={r.matiere_organique != null ? interpretMO(r.matiere_organique) : null} />
-              <ResultRow num={4} label="Azote total" value={r.azote} unit="%" interp={r.azote != null ? interpretAzote(r.azote) : null} />
-              <ResultRow num={5} label="Phosphore assimilable (Olsen)" value={r.phosphore} unit="mg/kg" interp={r.phosphore != null ? interpretPhosphore(r.phosphore) : null} />
-              <ResultRow num={6} label="Potassium échangeable" value={r.potassium} unit="mg/kg" interp={r.potassium != null ? interpretPotassium(r.potassium) : null} />
-              <ResultRow num={7} label="Calcium" value={r.calcium} unit="mg/kg" interp={r.calcium != null ? interpretCalcium(r.calcium) : null} />
-              <ResultRow num={8} label="Magnésium" value={r.magnesium} unit="mg/kg" interp={r.magnesium != null ? interpretMagnesium(r.magnesium) : null} />
-              <ResultRow num={9} label="Sodium" value={r.sodium} unit="mg/kg" interp={r.sodium != null ? interpretSodium(r.sodium) : null} />
-              <ResultRow num={10} label="CEC" value={r.cec} unit="meq/100g" interp={r.cec != null ? interpretCEC(r.cec) : null} />
-            </div>
-          )}
-          {r.report_type === "granulometrique" && (
-            <div className="space-y-0">
-              <ResultRow num={1} label="Argile" value={r.argile} unit="%" interp={null} />
-              <ResultRow num={2} label="Limon" value={r.limon} unit="%" interp={null} />
-              <ResultRow num={3} label="Sable" value={r.sable} unit="%" interp={null} />
-              {r.argile != null && r.limon != null && r.sable != null && (
-                <div className="flex items-center justify-between py-2 mt-2 bg-muted/50 rounded-lg px-3">
-                  <span className="text-sm font-medium">Texture du sol</span>
-                  <span className="text-sm font-bold text-emerald-600">{interpretGranulo(r.argile, r.limon, r.sable)}</span>
-                </div>
-              )}
-            </div>
-          )}
-          {r.report_type === "oligo_elements" && (
-            <div className="space-y-0">
-              <ResultRow num={1} label="Fer (Fe) — DTPA" value={r.fer} unit="mg/kg" interp={r.fer != null ? interpretFer(r.fer) : null} />
-              <ResultRow num={2} label="Zinc (Zn) — DTPA" value={r.zinc} unit="mg/kg" interp={r.zinc != null ? interpretZinc(r.zinc) : null} />
-              <ResultRow num={3} label="Cuivre (Cu) — DTPA" value={r.cuivre} unit="mg/kg" interp={r.cuivre != null ? interpretCuivre(r.cuivre) : null} />
-              <ResultRow num={4} label="Manganèse (Mn) — DTPA" value={r.manganese} unit="mg/kg" interp={r.manganese != null ? interpretManganese(r.manganese) : null} />
-              <ResultRow num={5} label="Bore (B)" value={r.bore} unit="mg/kg" interp={r.bore != null ? interpretBore(r.bore) : null} />
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    );
-  };
-
-  // ── Users list view ──
+  // ── Users list ──
   if (view === "users") {
     return (
       <div className="space-y-4">
@@ -214,7 +275,7 @@ export default function RapportSolPage() {
             return (
               <Card key={c.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => { setSelectedClientId(c.id); setView("history"); }}>
                 <CardContent className="p-4 flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
+                  <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-sm">
                     {(c.firstName?.[0] ?? "").toUpperCase()}{(c.lastName?.[0] ?? "").toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -232,106 +293,195 @@ export default function RapportSolPage() {
     );
   }
 
-  // ── History view ──
+  // ── History ──
   if (view === "history") {
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
+        <div className="border-b pb-3">
+          <h2 className="text-xl font-bold">Historique</h2>
+        </div>
+        <div className="flex items-center justify-between">
+          <button onClick={() => { setView("users"); setSelectedClientId(null); }} className="flex items-center gap-2 text-sm text-emerald-700 hover:underline">
+            <ArrowLeft className="h-4 w-4" />Retour
+          </button>
+          <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setView("form")}>
+            <Plus className="mr-2 h-4 w-4" />Nouveau rapport
+          </Button>
+        </div>
+
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => { setView("users"); setSelectedClientId(null); }}><ArrowLeft className="h-4 w-4" /></Button>
-          <div>
-            <h2 className="text-xl font-bold">{selectedClient ? `${selectedClient.firstName} ${selectedClient.lastName}` : ""}</h2>
-            <p className="text-sm text-muted-foreground">Historique des rapports sol</p>
+          <div className="h-12 w-12 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-lg">
+            {(selectedClient?.firstName?.[0] ?? "").toUpperCase()}
           </div>
-          <div className="ml-auto">
-            <Button onClick={() => setView("form")}><Plus className="mr-2 h-4 w-4" />Nouveau rapport</Button>
+          <div>
+            <h3 className="text-xl font-bold">{selectedClient?.firstName} {selectedClient?.lastName}</h3>
+            <p className="text-sm text-muted-foreground">Historique des rapports</p>
           </div>
         </div>
-        {clientReports.length === 0 && <p className="text-muted-foreground text-center py-12">Aucun rapport pour cet utilisateur</p>}
-        {clientReports.map(renderReportResult)}
+
+        <div className="space-y-3">
+          {clientReports.map((r, idx) => {
+            const num = clientReports.length - idx;
+            return (
+              <Card key={r.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => { setViewingReportId(r.id); setView("result"); }}>
+                <CardContent className="p-4 flex items-center gap-4">
+                  <div className="h-10 w-10 rounded-lg bg-emerald-50 flex items-center justify-center">
+                    <FileText className="h-5 w-5 text-emerald-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold">Rapport #{num}</p>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      {new Date(r.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                  </div>
+                  <Eye className="h-5 w-5 text-muted-foreground" />
+                </CardContent>
+              </Card>
+            );
+          })}
+          {clientReports.length === 0 && <p className="text-muted-foreground text-center py-12">Aucun rapport pour cet utilisateur</p>}
+        </div>
       </div>
     );
   }
 
   // ── Result view ──
-  if (view === "result" && lastReport) {
+  if (view === "result" && viewingReport) {
+    const client = clients.find((c) => c.id === viewingReport.client_id);
     return (
-      <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => setView("history")}><ArrowLeft className="h-4 w-4" /></Button>
-          <h2 className="text-xl font-bold">Résultat de l'analyse</h2>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <button onClick={() => setView("history")} className="flex items-center gap-2 text-sm text-emerald-700 hover:underline">
+            <ArrowLeft className="h-4 w-4" />Retour
+          </button>
+          <DeleteDialog onConfirm={() => { deleteMut.mutate(viewingReport.id); setView("history"); }} itemName="ce rapport" />
         </div>
-        {renderReportResult(lastReport)}
-        <Button variant="outline" onClick={() => setView("history")}>Retour à l'historique</Button>
+        <div className="flex items-center gap-3 mb-2">
+          <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-sm">
+            {(client?.firstName?.[0] ?? "").toUpperCase()}
+          </div>
+          <div>
+            <h3 className="text-lg font-bold">{client?.firstName} {client?.lastName}</h3>
+            <p className="text-xs text-muted-foreground">
+              {new Date(viewingReport.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+            </p>
+          </div>
+        </div>
+        <ReportResultView r={viewingReport} />
       </div>
     );
   }
 
-  // ── Form view with left nav ──
+  // ── Form view (all sections in one form) ──
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <button onClick={() => setView("history")} className="flex items-center gap-2 text-sm text-emerald-700 hover:underline">
+          <ArrowLeft className="h-4 w-4" />Retour
+        </button>
+      </div>
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={() => setView("history")}><ArrowLeft className="h-4 w-4" /></Button>
+        <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-sm">
+          {(selectedClient?.firstName?.[0] ?? "").toUpperCase()}
+        </div>
         <div>
-          <h2 className="text-xl font-bold">Nouveau rapport — {selectedClient ? `${selectedClient.firstName} ${selectedClient.lastName}` : ""}</h2>
+          <h3 className="text-lg font-bold">{selectedClient?.firstName} {selectedClient?.lastName}</h3>
+          <p className="text-xs text-muted-foreground">Nouveau rapport</p>
         </div>
       </div>
-      <div className="flex gap-6">
-        {/* Left nav */}
-        <div className="w-64 shrink-0 space-y-1">
-          {NAV_ITEMS.map((item) => (
-            <button
-              key={item.key}
-              onClick={() => setActiveTab(item.key)}
-              className={`w-full flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors text-left ${activeTab === item.key ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`}
-            >
-              <item.icon className="h-4 w-4" />
-              {item.label}
-            </button>
-          ))}
-        </div>
 
-        {/* Form */}
-        <Card className="flex-1">
-          <CardHeader>
-            <CardTitle className="text-lg">{NAV_ITEMS.find((n) => n.key === activeTab)?.label}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {activeTab === "physico_chimique" && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div><Label><span className="text-emerald-600 font-bold mr-1">1.</span>pH (eau)</Label><Input name="ph" type="number" step="0.01" min="0" max="14" required /></div>
-                  <div><Label><span className="text-emerald-600 font-bold mr-1">2.</span>Conductivité (mS/cm)</Label><Input name="conductivite" type="number" step="0.01" required /></div>
-                  <div><Label><span className="text-emerald-600 font-bold mr-1">3.</span>Matière organique (%)</Label><Input name="matiere_organique" type="number" step="0.01" required /></div>
-                  <div><Label><span className="text-emerald-600 font-bold mr-1">4.</span>Azote total (%)</Label><Input name="azote" type="number" step="0.001" required /></div>
-                  <div><Label><span className="text-emerald-600 font-bold mr-1">5.</span>Phosphore (mg/kg)</Label><Input name="phosphore" type="number" step="0.1" required /></div>
-                  <div><Label><span className="text-emerald-600 font-bold mr-1">6.</span>Potassium (mg/kg)</Label><Input name="potassium" type="number" step="0.1" required /></div>
-                  <div><Label><span className="text-emerald-600 font-bold mr-1">7.</span>Calcium (mg/kg)</Label><Input name="calcium" type="number" step="0.1" required /></div>
-                  <div><Label><span className="text-emerald-600 font-bold mr-1">8.</span>Magnésium (mg/kg)</Label><Input name="magnesium" type="number" step="0.1" required /></div>
-                  <div><Label><span className="text-emerald-600 font-bold mr-1">9.</span>Sodium (mg/kg)</Label><Input name="sodium" type="number" step="0.1" required /></div>
-                  <div><Label><span className="text-emerald-600 font-bold mr-1">10.</span>CEC (meq/100g)</Label><Input name="cec" type="number" step="0.1" required /></div>
-                </div>
-              )}
-              {activeTab === "granulometrique" && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div><Label><span className="text-emerald-600 font-bold mr-1">1.</span>Argile (%)</Label><Input name="argile" type="number" step="0.1" required /></div>
-                  <div><Label><span className="text-emerald-600 font-bold mr-1">2.</span>Limon (%)</Label><Input name="limon" type="number" step="0.1" required /></div>
-                  <div><Label><span className="text-emerald-600 font-bold mr-1">3.</span>Sable (%)</Label><Input name="sable" type="number" step="0.1" required /></div>
-                </div>
-              )}
-              {activeTab === "oligo_elements" && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div><Label><span className="text-emerald-600 font-bold mr-1">1.</span>Fer (mg/kg)</Label><Input name="fer" type="number" step="0.01" required /></div>
-                  <div><Label><span className="text-emerald-600 font-bold mr-1">2.</span>Zinc (mg/kg)</Label><Input name="zinc" type="number" step="0.01" required /></div>
-                  <div><Label><span className="text-emerald-600 font-bold mr-1">3.</span>Cuivre (mg/kg)</Label><Input name="cuivre" type="number" step="0.01" required /></div>
-                  <div><Label><span className="text-emerald-600 font-bold mr-1">4.</span>Manganèse (mg/kg)</Label><Input name="manganese" type="number" step="0.01" required /></div>
-                  <div><Label><span className="text-emerald-600 font-bold mr-1">5.</span>Bore (mg/kg)</Label><Input name="bore" type="number" step="0.01" required /></div>
-                </div>
-              )}
-              <Button type="submit" disabled={createMut.isPending}>Enregistrer et voir les résultats</Button>
-            </form>
+      <form onSubmit={handleSubmit} className="space-y-8">
+        {/* Physico-chimique */}
+        <Card>
+          <CardContent className="p-6">
+            <h3 className="text-lg font-semibold mb-4 flex items-center">
+              <SectionBadge num={2} />Analyses Physico-Chimiques
+            </h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-2 text-muted-foreground font-medium">Paramètre</th>
+                    <th className="text-left py-2 text-muted-foreground font-medium">Résultat</th>
+                    <th className="text-left py-2 text-muted-foreground font-medium">Unité</th>
+                    <th className="text-left py-2 text-muted-foreground font-medium">Méthode</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {PHYSICO_FIELDS.map((f) => (
+                    <tr key={f.name} className="border-b last:border-0">
+                      <td className="py-3 text-emerald-700 font-medium">{f.label}</td>
+                      <td className="py-3"><Input name={f.name} type="number" step="any" className="w-24 h-8" placeholder="—" /></td>
+                      <td className="py-3 text-muted-foreground">{f.unit}</td>
+                      <td className="py-3 text-muted-foreground">{f.method}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </CardContent>
         </Card>
-      </div>
+
+        {/* Granulométrique */}
+        <Card>
+          <CardContent className="p-6">
+            <h3 className="text-lg font-semibold mb-4 flex items-center">
+              <SectionBadge num={3} />Analyse Granulométrique
+            </h3>
+            <table className="text-sm">
+              <tbody>
+                {GRANULO_FIELDS.map((f) => (
+                  <tr key={f.name} className="border-b last:border-0">
+                    <td className="py-3 pr-8 text-emerald-700 font-medium">{f.label}</td>
+                    <td className="py-3">
+                      <div className="flex items-center gap-1">
+                        <Input name={f.name} type="number" step="any" className="w-20 h-8" placeholder="%" />
+                        <span className="text-muted-foreground text-sm">%</span>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+
+        {/* Oligo-éléments */}
+        <Card>
+          <CardContent className="p-6">
+            <h3 className="text-lg font-semibold mb-4 flex items-center">
+              <SectionBadge num={4} />Analyse des oligo-éléments
+            </h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-2 text-muted-foreground font-medium">Élément</th>
+                    <th className="text-left py-2 text-muted-foreground font-medium">Résultat</th>
+                    <th className="text-right py-2 text-muted-foreground font-medium">Unité</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {OLIGO_FIELDS.map((f) => (
+                    <tr key={f.name} className="border-b last:border-0">
+                      <td className="py-3 text-emerald-700 font-medium">{f.label}</td>
+                      <td className="py-3"><Input name={f.name} type="number" step="any" className="w-24 h-8" placeholder="—" /></td>
+                      <td className="py-3 text-right text-muted-foreground">{f.unit}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="flex justify-end">
+          <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700" disabled={createMut.isPending}>
+            Enregistrer le rapport
+          </Button>
+        </div>
+      </form>
     </div>
   );
 }
