@@ -2,7 +2,6 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { getClients } from "@/services/data-service";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +14,13 @@ import {
   interpretCEC, interpretFer, interpretZinc, interpretCuivre, interpretManganese,
   interpretBore, interpretGranulo,
 } from "@/utils/soil-interpretations";
+
+interface DbClient {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string;
+}
 
 type View = "users" | "history" | "form" | "result";
 
@@ -210,7 +216,13 @@ export default function RapportSolPage() {
     return isNaN(n) ? null : n;
   };
 
-  const { data: clients = [] } = useQuery({ queryKey: ["clients"], queryFn: getClients });
+  const { data: clients = [] } = useQuery<DbClient[]>({
+    queryKey: ["clients-db"],
+    queryFn: async () => {
+      const { data } = await supabase.from("clients").select("id, first_name, last_name, email");
+      return (data ?? []) as DbClient[];
+    },
+  });
   const { data: reports = [] } = useQuery({
     queryKey: ["soil_reports"],
     queryFn: async () => {
@@ -242,7 +254,7 @@ export default function RapportSolPage() {
   const filteredClients = useMemo(() => {
     const q = search.toLowerCase();
     return clients.filter((c) =>
-      `${c.firstName} ${c.lastName} ${c.email}`.toLowerCase().includes(q)
+      `${c.first_name} ${c.last_name} ${c.email}`.toLowerCase().includes(q)
     );
   }, [clients, search]);
 
@@ -284,10 +296,10 @@ export default function RapportSolPage() {
               <Card key={c.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => { setSelectedClientId(c.id); setView("history"); }}>
                 <CardContent className="p-4 flex items-center gap-3">
                   <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-sm">
-                    {(c.firstName?.[0] ?? "").toUpperCase()}{(c.lastName?.[0] ?? "").toUpperCase()}
+                    {(c.first_name?.[0] ?? "").toUpperCase()}{(c.last_name?.[0] ?? "").toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate">{c.firstName} {c.lastName}</p>
+                    <p className="text-sm font-semibold truncate">{c.first_name} {c.last_name}</p>
                     <p className="text-xs text-muted-foreground truncate">{c.email}</p>
                   </div>
                   <span className="text-xs text-muted-foreground">{count} rapport{count !== 1 ? "s" : ""}</span>
@@ -319,10 +331,10 @@ export default function RapportSolPage() {
 
         <div className="flex items-center gap-3">
           <div className="h-12 w-12 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-lg">
-            {(selectedClient?.firstName?.[0] ?? "").toUpperCase()}
+            {(selectedClient?.first_name?.[0] ?? "").toUpperCase()}
           </div>
           <div>
-            <h3 className="text-xl font-bold">{selectedClient?.firstName} {selectedClient?.lastName}</h3>
+            <h3 className="text-xl font-bold">{selectedClient?.first_name} {selectedClient?.last_name}</h3>
             <p className="text-sm text-muted-foreground">Historique des rapports</p>
           </div>
         </div>
@@ -367,10 +379,10 @@ export default function RapportSolPage() {
         </div>
         <div className="flex items-center gap-3 mb-2">
           <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-sm">
-            {(client?.firstName?.[0] ?? "").toUpperCase()}
+            {(client?.first_name?.[0] ?? "").toUpperCase()}
           </div>
           <div>
-            <h3 className="text-lg font-bold">{client?.firstName} {client?.lastName}</h3>
+            <h3 className="text-lg font-bold">{client?.first_name} {client?.last_name}</h3>
             <p className="text-xs text-muted-foreground">
               {new Date(viewingReport.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}
             </p>
@@ -392,10 +404,10 @@ export default function RapportSolPage() {
       </div>
       <div className="flex items-center gap-3">
         <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-sm">
-          {(selectedClient?.firstName?.[0] ?? "").toUpperCase()}
+          {(selectedClient?.first_name?.[0] ?? "").toUpperCase()}
         </div>
         <div>
-          <h3 className="text-lg font-bold">{selectedClient?.firstName} {selectedClient?.lastName}</h3>
+          <h3 className="text-lg font-bold">{selectedClient?.first_name} {selectedClient?.last_name}</h3>
           <p className="text-xs text-muted-foreground">Nouveau rapport</p>
         </div>
       </div>
