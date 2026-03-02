@@ -201,6 +201,14 @@ export default function RapportSolPage() {
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [viewingReportId, setViewingReportId] = useState<string | null>(null);
+  const [formValues, setFormValues] = useState<Record<string, string>>({});
+  const updateField = (name: string, value: string) => setFormValues((prev) => ({ ...prev, [name]: value }));
+  const numVal = (name: string): number | null => {
+    const v = formValues[name];
+    if (!v || v.trim() === "") return null;
+    const n = parseFloat(v);
+    return isNaN(n) ? null : n;
+  };
 
   const { data: clients = [] } = useQuery({ queryKey: ["clients"], queryFn: getClients });
   const { data: reports = [] } = useQuery({
@@ -373,7 +381,8 @@ export default function RapportSolPage() {
     );
   }
 
-  // ── Form view (all sections in one form) ──
+  // ── Form view (all sections in one form, with live interpretation) ──
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -406,17 +415,26 @@ export default function RapportSolPage() {
                     <th className="text-left py-2 text-muted-foreground font-medium">Résultat</th>
                     <th className="text-left py-2 text-muted-foreground font-medium">Unité</th>
                     <th className="text-left py-2 text-muted-foreground font-medium">Méthode</th>
+                    <th className="text-left py-2 text-muted-foreground font-medium">Interprétation</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {PHYSICO_FIELDS.map((f) => (
-                    <tr key={f.name} className="border-b last:border-0">
-                      <td className="py-3 text-emerald-700 font-medium">{f.label}</td>
-                      <td className="py-3"><Input name={f.name} type="number" step="any" className="w-24 h-8" placeholder="—" /></td>
-                      <td className="py-3 text-muted-foreground">{f.unit}</td>
-                      <td className="py-3 text-muted-foreground">{f.method}</td>
-                    </tr>
-                  ))}
+                  {PHYSICO_FIELDS.map((f) => {
+                    const val = numVal(f.name);
+                    const interp = val != null ? f.interp(val) : null;
+                    return (
+                      <tr key={f.name} className="border-b last:border-0">
+                        <td className="py-3 text-emerald-700 font-medium">{f.label}</td>
+                        <td className="py-3">
+                          <Input name={f.name} type="number" step="any" className="w-24 h-8" placeholder="—"
+                            value={formValues[f.name] ?? ""} onChange={(e) => updateField(f.name, e.target.value)} />
+                        </td>
+                        <td className="py-3 text-muted-foreground">{f.unit}</td>
+                        <td className="py-3 text-muted-foreground">{f.method}</td>
+                        <td className={`py-3 font-semibold ${interp?.color ?? ""}`}>{interp?.label ?? "—"}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -429,21 +447,31 @@ export default function RapportSolPage() {
             <h3 className="text-lg font-semibold mb-4 flex items-center">
               <SectionBadge num={3} />Analyse Granulométrique
             </h3>
-            <table className="text-sm">
+            <table className="text-sm max-w-md">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-2 text-muted-foreground font-medium">Fraction</th>
+                  <th className="text-left py-2 text-muted-foreground font-medium">%</th>
+                </tr>
+              </thead>
               <tbody>
                 {GRANULO_FIELDS.map((f) => (
                   <tr key={f.name} className="border-b last:border-0">
                     <td className="py-3 pr-8 text-emerald-700 font-medium">{f.label}</td>
                     <td className="py-3">
-                      <div className="flex items-center gap-1">
-                        <Input name={f.name} type="number" step="any" className="w-20 h-8" placeholder="%" />
-                        <span className="text-muted-foreground text-sm">%</span>
-                      </div>
+                      <Input name={f.name} type="number" step="any" className="w-20 h-8" placeholder="%"
+                        value={formValues[f.name] ?? ""} onChange={(e) => updateField(f.name, e.target.value)} />
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            {numVal("argile") != null && numVal("limon") != null && numVal("sable") != null && (
+              <p className="mt-4 text-sm">
+                <span className="font-semibold">Classe texturale : </span>
+                <span className="text-emerald-600 font-bold">{interpretGranulo(numVal("argile")!, numVal("limon")!, numVal("sable")!)}</span>
+              </p>
+            )}
           </CardContent>
         </Card>
 
@@ -459,17 +487,26 @@ export default function RapportSolPage() {
                   <tr className="border-b">
                     <th className="text-left py-2 text-muted-foreground font-medium">Élément</th>
                     <th className="text-left py-2 text-muted-foreground font-medium">Résultat</th>
-                    <th className="text-right py-2 text-muted-foreground font-medium">Unité</th>
+                    <th className="text-left py-2 text-muted-foreground font-medium">Unité</th>
+                    <th className="text-left py-2 text-muted-foreground font-medium">Interprétation</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {OLIGO_FIELDS.map((f) => (
-                    <tr key={f.name} className="border-b last:border-0">
-                      <td className="py-3 text-emerald-700 font-medium">{f.label}</td>
-                      <td className="py-3"><Input name={f.name} type="number" step="any" className="w-24 h-8" placeholder="—" /></td>
-                      <td className="py-3 text-right text-muted-foreground">{f.unit}</td>
-                    </tr>
-                  ))}
+                  {OLIGO_FIELDS.map((f) => {
+                    const val = numVal(f.name);
+                    const interp = val != null ? f.interp(val) : null;
+                    return (
+                      <tr key={f.name} className="border-b last:border-0">
+                        <td className="py-3 text-emerald-700 font-medium">{f.label}</td>
+                        <td className="py-3">
+                          <Input name={f.name} type="number" step="any" className="w-24 h-8" placeholder="—"
+                            value={formValues[f.name] ?? ""} onChange={(e) => updateField(f.name, e.target.value)} />
+                        </td>
+                        <td className="py-3 text-muted-foreground">{f.unit}</td>
+                        <td className={`py-3 font-semibold ${interp?.color ?? ""}`}>{interp?.label ?? "—"}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
