@@ -230,10 +230,10 @@ export default function RapportSolPage() {
       if (error) throw error;
       return data as SoilReport;
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["soil_reports"] });
-      setViewingReportId(data.id);
-      setView("result");
+      setFormValues({});
+      setView("history");
       toast({ title: "Rapport enregistré" });
     },
   });
