@@ -86,6 +86,7 @@ export type Database = {
           last_name: string | null
           updated_at: string
           user_id: string
+          user_role: string
         }
         Insert: {
           avatar_url?: string | null
@@ -95,6 +96,7 @@ export type Database = {
           last_name?: string | null
           updated_at?: string
           user_id: string
+          user_role?: string
         }
         Update: {
           avatar_url?: string | null
@@ -104,6 +106,7 @@ export type Database = {
           last_name?: string | null
           updated_at?: string
           user_id?: string
+          user_role?: string
         }
         Relationships: []
       }
@@ -222,7 +225,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_all_auth_users: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          created_at: string
+          email: string
+          email_confirmed_at: string
+          first_name: string
+          id: string
+          last_name: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
