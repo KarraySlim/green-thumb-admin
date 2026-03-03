@@ -217,10 +217,16 @@ export default function RapportSolPage() {
   };
 
   const { data: clients = [] } = useQuery<DbClient[]>({
-    queryKey: ["clients-db"],
+    queryKey: ["auth-users-for-reports"],
     queryFn: async () => {
-      const { data } = await supabase.from("clients").select("id, first_name, last_name, email");
-      return (data ?? []) as DbClient[];
+      const { data, error } = await supabase.rpc("get_all_auth_users");
+      if (error) throw error;
+      return (data ?? []).map((u: any) => ({
+        id: u.id,
+        first_name: u.first_name || null,
+        last_name: u.last_name || null,
+        email: u.email,
+      }));
     },
   });
   const { data: reports = [] } = useQuery({
