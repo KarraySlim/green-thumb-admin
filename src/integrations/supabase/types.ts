@@ -183,15 +183,7 @@ export type Database = {
           sodium?: number | null
           zinc?: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "soil_reports_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       subscription_notifications: {
         Row: {
