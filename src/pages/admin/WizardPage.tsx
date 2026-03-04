@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getClients, getTypesPlante, createSurface, createPlante, createVanne } from "@/services/data-service";
+import { getProfiles, getTypesPlante, createSurface, createPlante, createVanne } from "@/services/data-service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,25 +16,21 @@ interface VanneData {
 }
 
 interface WizardData {
-  // Surface
   nomSurface: string;
   localisation: string;
-  fkClient: string;
-  // Plante
+  fkUser: string;
   nomPlante: string;
   agePlante: number;
   fkTypePlante: string;
-  // Counts
   nbVanne: number;
   nbPlante: number;
-  // Vannes
   vannes: VanneData[];
 }
 
 const initialData: WizardData = {
   nomSurface: "",
   localisation: "",
-  fkClient: "",
+  fkUser: "",
   nomPlante: "",
   agePlante: 0,
   fkTypePlante: "",
@@ -51,7 +47,7 @@ export default function WizardPage() {
   const { toast } = useToast();
   const qc = useQueryClient();
 
-  const { data: clientsList = [] } = useQuery({ queryKey: ["clients"], queryFn: getClients });
+  const { data: profilesList = [] } = useQuery({ queryKey: ["profiles"], queryFn: getProfiles });
   const { data: typesList = [] } = useQuery({ queryKey: ["types-plante"], queryFn: getTypesPlante });
 
   const updateField = <K extends keyof WizardData>(key: K, value: WizardData[K]) => {
@@ -75,34 +71,17 @@ export default function WizardPage() {
     });
   };
 
-  const canGoStep1 = data.nomSurface && data.localisation && data.fkClient && data.nomPlante && data.fkTypePlante && data.nbVanne > 0;
+  const canGoStep1 = data.nomSurface && data.localisation && data.fkUser && data.nomPlante && data.fkTypePlante && data.nbVanne > 0;
   const canGoStep2 = data.vannes.every((v) => v.nomVanne && v.debitEauParVanne > 0);
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      const surface = await createSurface({
-        nomSurface: data.nomSurface,
-        localisation: data.localisation,
-        fkClient: data.fkClient,
-      });
-
-      await createPlante({
-        nomPlante: data.nomPlante,
-        age: data.agePlante,
-        fkTypePlante: data.fkTypePlante,
-        fkSurface: surface.id,
-      });
-
+      const surface = await createSurface({ nomSurface: data.nomSurface, localisation: data.localisation, fkUser: data.fkUser });
+      await createPlante({ nomPlante: data.nomPlante, age: data.agePlante, fkTypePlante: data.fkTypePlante, fkSurface: surface.id });
       for (const v of data.vannes) {
-        await createVanne({
-          nomVanne: v.nomVanne,
-          nbPlantParVanne: v.nbPlantParVanne,
-          debitEauParVanne: v.debitEauParVanne,
-          fkSurface: surface.id,
-        });
+        await createVanne({ nomVanne: v.nomVanne, nbPlantParVanne: v.nbPlantParVanne, debitEauParVanne: v.debitEauParVanne, fkSurface: surface.id });
       }
-
       qc.invalidateQueries({ queryKey: ["surfaces"] });
       qc.invalidateQueries({ queryKey: ["plantes"] });
       qc.invalidateQueries({ queryKey: ["vannes"] });
@@ -116,25 +95,21 @@ export default function WizardPage() {
     }
   };
 
-  const clientEmail = clientsList.find((c) => c.id === data.fkClient)?.email ?? "—";
+  const userEmail = profilesList.find((p) => p.id === data.fkUser)?.email ?? "—";
   const typePlanteNom = typesList.find((t) => t.id === data.fkTypePlante)?.nomPlante ?? "—";
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      {/* Stepper */}
       <div className="flex items-center gap-2 mb-4">
         {["Surface & Plante", "Vannes", "Récapitulatif"].map((label, i) => (
           <div key={i} className="flex items-center gap-2">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-              i === step ? "bg-primary text-primary-foreground" : i < step ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
-            }`}>{i + 1}</div>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${i === step ? "bg-primary text-primary-foreground" : i < step ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"}`}>{i + 1}</div>
             <span className={`text-sm ${i === step ? "font-semibold text-foreground" : "text-muted-foreground"}`}>{label}</span>
             {i < 2 && <div className="w-8 h-px bg-border" />}
           </div>
         ))}
       </div>
 
-      {/* Step 1: Surface + Plante */}
       {step === 0 && (
         <Card>
           <CardHeader><CardTitle>Informations Surface & Plante</CardTitle></CardHeader>
@@ -143,10 +118,10 @@ export default function WizardPage() {
               <div><Label>Nom surface</Label><Input value={data.nomSurface} onChange={(e) => updateField("nomSurface", e.target.value)} required /></div>
               <div><Label>Localisation</Label><Input value={data.localisation} onChange={(e) => updateField("localisation", e.target.value)} required /></div>
               <div>
-                <Label>Client</Label>
-                <Select value={data.fkClient} onValueChange={(v) => updateField("fkClient", v)}>
-                  <SelectTrigger><SelectValue placeholder="Sélectionner un client" /></SelectTrigger>
-                  <SelectContent>{clientsList.map((c) => <SelectItem key={c.id} value={c.id}>{c.email}</SelectItem>)}</SelectContent>
+                <Label>Utilisateur</Label>
+                <Select value={data.fkUser} onValueChange={(v) => updateField("fkUser", v)}>
+                  <SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger>
+                  <SelectContent>{profilesList.map((p) => <SelectItem key={p.id} value={p.id}>{p.email || `${p.first_name} ${p.last_name}`}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div><Label>Nom plante</Label><Input value={data.nomPlante} onChange={(e) => updateField("nomPlante", e.target.value)} required /></div>
@@ -168,7 +143,6 @@ export default function WizardPage() {
         </Card>
       )}
 
-      {/* Step 2: Vannes */}
       {step === 1 && (
         <Card>
           <CardHeader><CardTitle>Configuration des vannes ({data.nbVanne})</CardTitle></CardHeader>
@@ -191,12 +165,9 @@ export default function WizardPage() {
         </Card>
       )}
 
-      {/* Step 3: Review */}
       {step === 2 && (
         <div className="space-y-4">
-          {/* Surface block */}
-          <Card className={`cursor-pointer transition-shadow hover:shadow-md ${editBlock === "surface" ? "ring-2 ring-primary" : ""}`}
-            onClick={() => { setEditBlock("surface"); setStep(0); }}>
+          <Card className="cursor-pointer transition-shadow hover:shadow-md" onClick={() => { setEditBlock("surface"); setStep(0); }}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-base">Surface</CardTitle>
               <Pencil className="h-4 w-4 text-muted-foreground" />
@@ -205,7 +176,7 @@ export default function WizardPage() {
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div><span className="text-muted-foreground">Nom :</span> {data.nomSurface}</div>
                 <div><span className="text-muted-foreground">Localisation :</span> {data.localisation}</div>
-                <div><span className="text-muted-foreground">Client :</span> {clientEmail}</div>
+                <div><span className="text-muted-foreground">Utilisateur :</span> {userEmail}</div>
                 <div><span className="text-muted-foreground">Plante :</span> {data.nomPlante} ({typePlanteNom}, {data.agePlante} ans)</div>
                 <div><span className="text-muted-foreground">Nb vannes :</span> {data.nbVanne}</div>
                 <div><span className="text-muted-foreground">Nb plantes :</span> {data.nbPlante}</div>
@@ -213,10 +184,8 @@ export default function WizardPage() {
             </CardContent>
           </Card>
 
-          {/* Vanne blocks */}
           {data.vannes.map((v, i) => (
-            <Card key={i} className={`cursor-pointer transition-shadow hover:shadow-md ${editBlock === `vanne-${i}` ? "ring-2 ring-primary" : ""}`}
-              onClick={() => { setEditBlock(`vanne-${i}`); setStep(1); }}>
+            <Card key={i} className="cursor-pointer transition-shadow hover:shadow-md" onClick={() => { setEditBlock(`vanne-${i}`); setStep(1); }}>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-base">Vanne {i + 1}</CardTitle>
                 <Pencil className="h-4 w-4 text-muted-foreground" />

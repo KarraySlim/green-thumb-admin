@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getClients, getSurfaces } from "@/services/data-service";
+import { getProfiles, getSurfaces } from "@/services/data-service";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +11,7 @@ const COLORS = ["hsl(145,63%,32%)", "hsl(145,63%,50%)", "hsl(140,30%,70%)", "hsl
 
 export default function DashboardPage() {
   const { t } = useLanguage();
-  const { data: clients = [] } = useQuery({ queryKey: ["clients"], queryFn: getClients });
+  const { data: profiles = [] } = useQuery({ queryKey: ["profiles"], queryFn: getProfiles });
   const { data: surfaces = [] } = useQuery({ queryKey: ["surfaces"], queryFn: getSurfaces });
   const { data: notifications = [] } = useQuery({
     queryKey: ["subscription_notifications"],
@@ -21,38 +21,35 @@ export default function DashboardPage() {
     },
   });
 
-  // Subscription distribution
   const subData = [
-    { name: t("sub.op1"), value: clients.filter(c => c.typeAbo === "op1").length },
-    { name: t("sub.op1_op2"), value: clients.filter(c => c.typeAbo === "op1_op2").length },
-    { name: t("sub.full"), value: clients.filter(c => c.typeAbo === "full").length },
-    { name: t("sub.noSub"), value: clients.filter(c => !c.typeAbo).length },
+    { name: t("sub.op1"), value: profiles.filter(c => c.type_abo === "op1").length },
+    { name: t("sub.op1_op2"), value: profiles.filter(c => c.type_abo === "op1_op2").length },
+    { name: t("sub.full"), value: profiles.filter(c => c.type_abo === "full").length },
+    { name: t("sub.noSub"), value: profiles.filter(c => !c.type_abo).length },
   ].filter(d => d.value > 0);
 
-  // Surfaces per user
-  const surfPerUser = clients.map(c => ({
-    name: `${c.firstName} ${c.lastName?.charAt(0) ?? ""}`,
-    surfaces: surfaces.filter(s => s.fkClient === c.id).length,
+  const surfPerUser = profiles.map(c => ({
+    name: `${c.first_name} ${c.last_name?.charAt(0) ?? ""}`,
+    surfaces: surfaces.filter(s => s.fkUser === c.id).length,
   }));
 
-  // Subscription alerts
   const now = Date.now();
-  const expiringSoon = clients.filter(c => {
-    if (!c.dateExpAbo) return false;
-    const diff = Math.ceil((new Date(c.dateExpAbo).getTime() - now) / (1000 * 60 * 60 * 24));
+  const expiringSoon = profiles.filter(c => {
+    if (!c.date_exp_abo) return false;
+    const diff = Math.ceil((new Date(c.date_exp_abo).getTime() - now) / (1000 * 60 * 60 * 24));
     return diff > 0 && diff <= 30;
   });
-  const expired = clients.filter(c => {
-    if (!c.dateExpAbo) return false;
-    return new Date(c.dateExpAbo).getTime() <= now;
+  const expired = profiles.filter(c => {
+    if (!c.date_exp_abo) return false;
+    return new Date(c.date_exp_abo).getTime() <= now;
   });
-  const activeCount = clients.filter(c => {
-    if (!c.dateExpAbo) return false;
-    return new Date(c.dateExpAbo).getTime() > now;
+  const activeCount = profiles.filter(c => {
+    if (!c.date_exp_abo) return false;
+    return new Date(c.date_exp_abo).getTime() > now;
   }).length;
 
   const stats = [
-    { label: t("dashboard.totalUsers"), value: clients.length, icon: Users, color: "bg-blue-500/10 text-blue-600" },
+    { label: t("dashboard.totalUsers"), value: profiles.length, icon: Users, color: "bg-blue-500/10 text-blue-600" },
     { label: t("dashboard.totalSurfaces"), value: surfaces.length, icon: Grid3X3, color: "bg-emerald-500/10 text-emerald-600" },
     { label: t("dashboard.activeSubscriptions"), value: activeCount, icon: ShieldCheck, color: "bg-green-500/10 text-green-600" },
     { label: t("dashboard.notificationsSent"), value: notifications.length, icon: Bell, color: "bg-violet-500/10 text-violet-600" },
@@ -62,7 +59,6 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-foreground">{t("dashboard.title")}</h2>
 
-      {/* Stats cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {stats.map((s) => (
           <Card key={s.label} className="hover:shadow-md transition-shadow">
@@ -79,7 +75,6 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* Alerts */}
       {(expiringSoon.length > 0 || expired.length > 0) && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="border-green-200 bg-green-50/50 dark:bg-green-950/20 dark:border-green-900">
@@ -112,7 +107,6 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Charts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader><CardTitle className="text-base">{t("dashboard.subscriptionDistribution")}</CardTitle></CardHeader>
@@ -153,18 +147,17 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Expiring soon table */}
       {expiringSoon.length > 0 && (
         <Card>
           <CardHeader><CardTitle className="text-base flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-amber-500" /> {t("dashboard.expiringClients")}</CardTitle></CardHeader>
           <CardContent>
             <div className="space-y-2">
               {expiringSoon.map(c => {
-                const days = Math.ceil((new Date(c.dateExpAbo!).getTime() - now) / (1000 * 60 * 60 * 24));
+                const days = Math.ceil((new Date(c.date_exp_abo!).getTime() - now) / (1000 * 60 * 60 * 24));
                 return (
                   <div key={c.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                     <div>
-                      <p className="font-medium text-foreground">{c.firstName} {c.lastName}</p>
+                      <p className="font-medium text-foreground">{c.first_name} {c.last_name}</p>
                       <p className="text-xs text-muted-foreground">{c.email}</p>
                     </div>
                     <Badge variant={days <= 7 ? "destructive" : "outline"} className="text-xs">

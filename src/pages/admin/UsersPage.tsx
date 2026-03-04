@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { DeleteDialog } from "@/components/DeleteDialog";
 import { toast } from "@/hooks/use-toast";
-import { Pencil, CheckCircle, Clock, Search, Trash2 } from "lucide-react";
+import { Pencil, CheckCircle, Clock, Search } from "lucide-react";
 
 interface AuthUser {
   id: string;
@@ -41,29 +41,21 @@ export default function UsersPage() {
 
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("user_id, user_role, first_name, last_name");
+        .select("user_id, user_role, first_name, last_name, phone_number, location");
 
-      const { data: clients } = await supabase
-        .from("clients")
-        .select("user_id, phone_number, location");
-
-      const roleMap = new Map(
-        (profiles ?? []).map((p: any) => [p.user_id, { role: p.user_role, firstName: p.first_name, lastName: p.last_name }])
-      );
-      const clientMap = new Map(
-        (clients ?? []).map((c: any) => [c.user_id, { phone: c.phone_number, location: c.location }])
+      const profileMap = new Map(
+        (profiles ?? []).map((p: any) => [p.user_id, p])
       );
 
       return (users ?? []).map((u: any) => {
-        const profileData = roleMap.get(u.id);
-        const clientData = clientMap.get(u.id);
+        const prof = profileMap.get(u.id);
         return {
           ...u,
-          first_name: profileData?.firstName || u.first_name || "",
-          last_name: profileData?.lastName || u.last_name || "",
-          user_role: profileData?.role || "CLIENT",
-          phone_number: clientData?.phone || "",
-          location: clientData?.location || "",
+          first_name: prof?.first_name || u.first_name || "",
+          last_name: prof?.last_name || u.last_name || "",
+          user_role: prof?.user_role || "CLIENT",
+          phone_number: prof?.phone_number || "",
+          location: prof?.location || "",
         };
       });
     },
@@ -78,41 +70,17 @@ export default function UsersPage() {
       phone: string;
       location: string;
     }) => {
-      // Update profile (role, name)
-      const { error: profileError } = await supabase
+      const { error } = await supabase
         .from("profiles")
         .update({
           user_role: payload.role,
           first_name: payload.firstName,
           last_name: payload.lastName,
-        } as any)
-        .eq("user_id", payload.userId);
-      if (profileError) throw profileError;
-
-      // Update or upsert client record for phone/location
-      const { data: existing } = await supabase
-        .from("clients")
-        .select("id")
-        .eq("user_id", payload.userId)
-        .maybeSingle();
-
-      if (existing) {
-        await supabase
-          .from("clients")
-          .update({ phone_number: payload.phone, location: payload.location })
-          .eq("user_id", payload.userId);
-      } else if (payload.phone || payload.location) {
-        const userEmail = authUsers.find((u) => u.id === payload.userId)?.email ?? "";
-        await supabase.from("clients").insert({
-          user_id: payload.userId,
-          email: userEmail,
-          first_name: payload.firstName,
-          last_name: payload.lastName,
           phone_number: payload.phone,
           location: payload.location,
-          role: payload.role,
-        });
-      }
+        } as any)
+        .eq("user_id", payload.userId);
+      if (error) throw error;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["auth-users"] });
@@ -123,9 +91,7 @@ export default function UsersPage() {
 
   const deleteMut = useMutation({
     mutationFn: async (userId: string) => {
-      // Delete profile and client records (auth user stays but loses app data)
       await supabase.from("profiles").delete().eq("user_id", userId);
-      await supabase.from("clients").delete().eq("user_id", userId);
       await supabase.from("soil_reports").delete().eq("client_id", userId);
     },
     onSuccess: () => {
