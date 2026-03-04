@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getClients, getSurfaces, getVannes, getTypesPlante, updateClient, updateSurface, createSurface, createPlante, createVanne } from "@/services/data-service";
+import { getProfiles, getSurfaces, getVannes, getTypesPlante, updateProfile, updateSurface, createSurface, createPlante, createVanne } from "@/services/data-service";
 import LocationSelector from "@/components/LocationSelector";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,20 +13,20 @@ import { Label } from "@/components/ui/label";
 import { Plus, Search, Wifi, WifiOff, Droplets, MapPin, Leaf, SlidersHorizontal, X, Pencil, CreditCard, ArrowRight, ArrowLeft, Save, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
-import { Client, Surface } from "@/types/models";
+import { Profile, Surface } from "@/types/models";
 import LocationPicker from "@/components/LocationPicker";
 
-function SubscriptionBadge({ client, t }: { client: Client; t: (k: string) => string }) {
-  if (!client.dateExpAbo || !client.typeAbo) {
+function SubscriptionBadge({ profile, t }: { profile: Profile; t: (k: string) => string }) {
+  if (!profile.date_exp_abo || !profile.type_abo) {
     return <Badge variant="outline" className="text-xs text-muted-foreground">{t("sub.noSub")}</Badge>;
   }
-  const diff = Math.ceil((new Date(client.dateExpAbo).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  const diff = Math.ceil((new Date(profile.date_exp_abo).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
   const isExpired = diff <= 0;
   return (
     <div className="flex items-center gap-1.5">
       <Badge variant={isExpired ? "destructive" : "default"} className="text-xs">
         <CreditCard className="mr-1 h-3 w-3" />
-        {t(`sub.${client.typeAbo}`)}
+        {t(`sub.${profile.type_abo}`)}
       </Badge>
       <span className={`text-xs font-medium ${isExpired ? "text-destructive" : "text-primary"}`}>
         {isExpired ? t("sub.expired") : `${diff} ${t("sub.daysLeft")}`}
@@ -46,18 +46,18 @@ export default function TravailPage() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterHasSurfaces, setFilterHasSurfaces] = useState("all");
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
   const [editingSurface, setEditingSurface] = useState<Surface | null>(null);
   const [showWizard, setShowWizard] = useState(false);
 
-  const { data: clients = [] } = useQuery({ queryKey: ["clients"], queryFn: getClients });
+  const { data: profiles = [] } = useQuery({ queryKey: ["profiles"], queryFn: getProfiles });
   const { data: surfaces = [] } = useQuery({ queryKey: ["surfaces"], queryFn: getSurfaces });
   const { data: vannes = [] } = useQuery({ queryKey: ["vannes"], queryFn: getVannes });
   const { data: typesList = [] } = useQuery({ queryKey: ["types-plante"], queryFn: getTypesPlante });
 
-  const updateClientMut = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<Client> }) => updateClient(id, data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["clients"] }); setEditingClient(null); toast({ title: t("users.updated") }); },
+  const updateProfileMut = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Profile> }) => updateProfile(id, data),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["profiles"] }); setEditingProfile(null); toast({ title: t("users.updated") }); },
   });
   const updateSurfaceMut = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<Surface> }) => updateSurface(id, data),
@@ -68,17 +68,17 @@ export default function TravailPage() {
   const activeFilters = useMemo(() => [filterLocation, filterStatus, filterHasSurfaces].filter(f => f !== "all").length, [filterLocation, filterStatus, filterHasSurfaces]);
   const clearFilters = () => { setFilterLocation("all"); setFilterStatus("all"); setFilterHasSurfaces("all"); setSearch(""); };
 
-  const filteredClients = useMemo(() => {
-    return clients.filter((c) => {
-      const matchSearch = search === "" || `${c.firstName} ${c.lastName} ${c.email}`.toLowerCase().includes(search.toLowerCase());
+  const filteredProfiles = useMemo(() => {
+    return profiles.filter((p) => {
+      const matchSearch = search === "" || `${p.first_name} ${p.last_name} ${p.email}`.toLowerCase().includes(search.toLowerCase());
       if (!matchSearch) return false;
-      const cs = surfaces.filter((s) => s.fkClient === c.id);
-      if (filterLocation !== "all" && !cs.some((s) => s.localisation === filterLocation)) return false;
-      if (filterHasSurfaces === "yes" && cs.length === 0) return false;
-      if (filterHasSurfaces === "no" && cs.length > 0) return false;
+      const ps = surfaces.filter((s) => s.fkUser === p.id);
+      if (filterLocation !== "all" && !ps.some((s) => s.localisation === filterLocation)) return false;
+      if (filterHasSurfaces === "yes" && ps.length === 0) return false;
+      if (filterHasSurfaces === "no" && ps.length > 0) return false;
       return true;
     });
-  }, [clients, search, filterLocation, filterStatus, filterHasSurfaces, surfaces]);
+  }, [profiles, search, filterLocation, filterStatus, filterHasSurfaces, surfaces]);
 
   return (
     <div className="space-y-6">
@@ -89,7 +89,6 @@ export default function TravailPage() {
         </Button>
       </div>
 
-      {/* Search & Filter */}
       <div className="space-y-3">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
@@ -116,32 +115,31 @@ export default function TravailPage() {
         )}
       </div>
 
-      {/* User Blocks */}
       <div className="space-y-6">
-        {filteredClients.map((client) => {
-          const clientSurfaces = filterLocation !== "all" ? surfaces.filter((s) => s.fkClient === client.id && s.localisation === filterLocation) : surfaces.filter((s) => s.fkClient === client.id);
+        {filteredProfiles.map((profile) => {
+          const profileSurfaces = filterLocation !== "all" ? surfaces.filter((s) => s.fkUser === profile.id && s.localisation === filterLocation) : surfaces.filter((s) => s.fkUser === profile.id);
           return (
-            <Card key={client.id} className="border-border hover:shadow-md transition-shadow">
+            <Card key={profile.id} className="border-border hover:shadow-md transition-shadow">
               <CardHeader className="flex flex-row items-start justify-between pb-3">
-                <div className="cursor-pointer" onClick={() => navigate(`/admin/travail/client/${client.id}`)}>
-                  <CardTitle className="text-lg">{client.firstName} {client.lastName}</CardTitle>
-                  <p className="text-sm text-muted-foreground">{client.email}</p>
-                  <div className="mt-1"><SubscriptionBadge client={client} t={t} /></div>
+                <div className="cursor-pointer" onClick={() => navigate(`/admin/travail/client/${profile.id}`)}>
+                  <CardTitle className="text-lg">{profile.first_name} {profile.last_name}</CardTitle>
+                  <p className="text-sm text-muted-foreground">{profile.email}</p>
+                  <div className="mt-1"><SubscriptionBadge profile={profile} t={t} /></div>
                 </div>
                 <div className="flex flex-col items-end gap-1">
                   <div className="flex gap-1">
-                    <Button variant="outline" size="sm" onClick={() => setEditingClient(client)} className="text-muted-foreground"><Pencil className="h-3 w-3" /></Button>
+                    <Button variant="outline" size="sm" onClick={() => setEditingProfile(profile)} className="text-muted-foreground"><Pencil className="h-3 w-3" /></Button>
                     <Button variant="outline" size="sm" className="border-primary text-primary hover:bg-primary/10"><Wifi className="mr-1 h-3 w-3" /> {t("travail.connect")}</Button>
                   </div>
                   <div className="flex items-center gap-1"><WifiOff className="h-3 w-3 text-destructive" /><span className="text-xs text-destructive font-medium">{t("travail.disconnected")}</span></div>
                 </div>
               </CardHeader>
               <CardContent>
-                {clientSurfaces.length === 0 ? (
+                {profileSurfaces.length === 0 ? (
                   <p className="text-sm text-muted-foreground italic">{t("travail.noSurface")}</p>
                 ) : (
                   <div className="space-y-3">
-                    {clientSurfaces.map((surface) => {
+                    {profileSurfaces.map((surface) => {
                       const surfaceVannes = vannes.filter((v) => v.fkSurface === surface.id);
                       return (
                         <div key={surface.id} className="border rounded-lg p-3 bg-muted/30 hover:bg-muted/50 transition-colors">
@@ -167,29 +165,29 @@ export default function TravailPage() {
             </Card>
           );
         })}
-        {filteredClients.length === 0 && <div className="text-center py-12 text-muted-foreground"><p>{t("travail.noUser")}</p></div>}
+        {filteredProfiles.length === 0 && <div className="text-center py-12 text-muted-foreground"><p>{t("travail.noUser")}</p></div>}
       </div>
 
-      <EditClientDialog client={editingClient} onClose={() => setEditingClient(null)} onSave={(id, data) => updateClientMut.mutate({ id, data })} />
+      <EditProfileDialog profile={editingProfile} onClose={() => setEditingProfile(null)} onSave={(id, data) => updateProfileMut.mutate({ id, data })} />
       <EditSurfaceDialog surface={editingSurface} onClose={() => setEditingSurface(null)} onSave={(id, data) => updateSurfaceMut.mutate({ id, data })} />
-      <NewProjectDialog open={showWizard} onClose={() => setShowWizard(false)} clients={clients} typesList={typesList} qc={qc} t={t} />
+      <NewProjectDialog open={showWizard} onClose={() => setShowWizard(false)} profiles={profiles} typesList={typesList} qc={qc} t={t} />
     </div>
   );
 }
 
-function EditClientDialog({ client, onClose, onSave }: { client: Client | null; onClose: () => void; onSave: (id: string, data: Partial<Client>) => void }) {
+function EditProfileDialog({ profile, onClose, onSave }: { profile: Profile | null; onClose: () => void; onSave: (id: string, data: Partial<Profile>) => void }) {
   const { t } = useLanguage();
   return (
-    <Dialog open={!!client} onOpenChange={(o) => !o && onClose()}>
+    <Dialog open={!!profile} onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
-        <DialogHeader><DialogTitle>{t("travail.edit")} - {client?.firstName} {client?.lastName}</DialogTitle></DialogHeader>
-        <form onSubmit={(e) => { e.preventDefault(); if (!client) return; const fd = new FormData(e.currentTarget); onSave(client.id, { firstName: fd.get("firstName") as string, lastName: fd.get("lastName") as string, email: fd.get("email") as string, phoneNumber: fd.get("phoneNumber") as string }); }} className="space-y-4">
+        <DialogHeader><DialogTitle>{t("travail.edit")} - {profile?.first_name} {profile?.last_name}</DialogTitle></DialogHeader>
+        <form onSubmit={(e) => { e.preventDefault(); if (!profile) return; const fd = new FormData(e.currentTarget); onSave(profile.id, { first_name: fd.get("firstName") as string, last_name: fd.get("lastName") as string, email: fd.get("email") as string, phone_number: fd.get("phoneNumber") as string }); }} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
-            <div><Label>{t("auth.firstName")}</Label><Input name="firstName" defaultValue={client?.firstName} /></div>
-            <div><Label>{t("auth.lastName")}</Label><Input name="lastName" defaultValue={client?.lastName} /></div>
+            <div><Label>{t("auth.firstName")}</Label><Input name="firstName" defaultValue={profile?.first_name} /></div>
+            <div><Label>{t("auth.lastName")}</Label><Input name="lastName" defaultValue={profile?.last_name} /></div>
           </div>
-          <div><Label>{t("auth.email")}</Label><Input name="email" defaultValue={client?.email} /></div>
-          <div><Label>{t("auth.phone")}</Label><Input name="phoneNumber" defaultValue={client?.phoneNumber} /></div>
+          <div><Label>{t("auth.email")}</Label><Input name="email" defaultValue={profile?.email} /></div>
+          <div><Label>{t("auth.phone")}</Label><Input name="phoneNumber" defaultValue={profile?.phone_number} /></div>
           <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={onClose}>{t("common.cancel")}</Button><Button type="submit">{t("common.save")}</Button></div>
         </form>
       </DialogContent>
@@ -216,29 +214,22 @@ function EditSurfaceDialog({ surface, onClose, onSave }: { surface: Surface | nu
 
 interface PlantEntry { nomPlante: string; age: number; fkTypePlante: string; }
 
-function NewProjectDialog({ open, onClose, clients, typesList, qc, t }: { open: boolean; onClose: () => void; clients: Client[]; typesList: any[]; qc: any; t: (k: string) => string }) {
-  // Step: 0 = question, 1 = surface & plante, 2 = vannes
+function NewProjectDialog({ open, onClose, profiles, typesList, qc, t }: { open: boolean; onClose: () => void; profiles: Profile[]; typesList: any[]; qc: any; t: (k: string) => string }) {
   const [step, setStep] = useState(0);
   const [samePlants, setSamePlants] = useState<boolean | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // Surface fields
   const [nomSurface, setNomSurface] = useState("");
   const [localisation, setLocalisation] = useState("");
-  const [fkClient, setFkClient] = useState("");
+  const [fkUser, setFkUser] = useState("");
   const [nbPlanteTotal, setNbPlanteTotal] = useState(0);
 
-  // Single plant (samePlants = true)
   const [nomPlante, setNomPlante] = useState("");
   const [agePlante, setAgePlante] = useState(0);
   const [fkTypePlante, setFkTypePlante] = useState("");
 
-  // Multiple plants (samePlants = false)
-  const [plantEntries, setPlantEntries] = useState<PlantEntry[]>([
-    { nomPlante: "", age: 0, fkTypePlante: "" },
-  ]);
+  const [plantEntries, setPlantEntries] = useState<PlantEntry[]>([{ nomPlante: "", age: 0, fkTypePlante: "" }]);
 
-  // Vannes
   const [nbVanne, setNbVanne] = useState(1);
   const [vannesData, setVannesData] = useState<VanneData[]>([{ nomVanne: "", nbPlantParVanne: 0, debitEauParVanne: 0 }]);
 
@@ -257,7 +248,7 @@ function NewProjectDialog({ open, onClose, clients, typesList, qc, t }: { open: 
     setPlantEntries(arr);
   };
 
-  const canStep1 = nomSurface && localisation && fkClient && nbVanne > 0 && (
+  const canStep1 = nomSurface && localisation && fkUser && nbVanne > 0 && (
     samePlants
       ? (nomPlante && fkTypePlante)
       : plantEntries.every(p => p.nomPlante && p.fkTypePlante)
@@ -267,7 +258,7 @@ function NewProjectDialog({ open, onClose, clients, typesList, qc, t }: { open: 
   const handleSave = async () => {
     setSaving(true);
     try {
-      const surface = await createSurface({ nomSurface, localisation, fkClient });
+      const surface = await createSurface({ nomSurface, localisation, fkUser });
 
       if (samePlants) {
         await createPlante({ nomPlante, age: agePlante, fkTypePlante, fkSurface: surface.id });
@@ -285,8 +276,7 @@ function NewProjectDialog({ open, onClose, clients, typesList, qc, t }: { open: 
       qc.invalidateQueries({ queryKey: ["plantes"] });
       qc.invalidateQueries({ queryKey: ["vannes"] });
       toast({ title: t("wizard.success") });
-      // Reset
-      setStep(0); setSamePlants(null); setNomSurface(""); setLocalisation(""); setFkClient(""); setNomPlante(""); setAgePlante(0); setFkTypePlante(""); setNbVanne(1); setNbPlanteTotal(0);
+      setStep(0); setSamePlants(null); setNomSurface(""); setLocalisation(""); setFkUser(""); setNomPlante(""); setAgePlante(0); setFkTypePlante(""); setNbVanne(1); setNbPlanteTotal(0);
       setVannesData([{ nomVanne: "", nbPlantParVanne: 0, debitEauParVanne: 0 }]);
       setPlantEntries([{ nomPlante: "", age: 0, fkTypePlante: "" }]);
       onClose();
@@ -303,141 +293,94 @@ function NewProjectDialog({ open, onClose, clients, typesList, qc, t }: { open: 
           <DialogDescription>{stepLabels[step]}</DialogDescription>
         </DialogHeader>
 
-        {/* Stepper */}
         <div className="flex items-center gap-2 mb-4">
           {stepLabels.map((label, i) => (
             <div key={i} className="flex items-center gap-2">
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${i === step ? "bg-primary text-primary-foreground" : i < step ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"}`}>{i + 1}</div>
-              <span className={`text-sm ${i === step ? "font-semibold" : "text-muted-foreground"}`}>{label}</span>
-              {i < stepLabels.length - 1 && <div className="w-6 h-px bg-border" />}
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${i === step ? "bg-primary text-primary-foreground" : i < step ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"}`}>{i + 1}</div>
+              <span className={`text-sm hidden sm:inline ${i === step ? "font-semibold text-foreground" : "text-muted-foreground"}`}>{label}</span>
+              {i < 2 && <div className="w-8 h-px bg-border" />}
             </div>
           ))}
         </div>
 
-        {/* Step 0: Question */}
         {step === 0 && (
-          <div className="space-y-6 py-4">
-            <p className="text-base font-medium text-foreground text-center">{t("wizard.sameAgetype")}</p>
-            <div className="flex justify-center gap-4">
-              <Button
-                variant={samePlants === true ? "default" : "outline"}
-                size="lg"
-                className="min-w-[120px]"
-                onClick={() => { setSamePlants(true); setStep(1); }}
-              >
-                {t("common.yes")}
-              </Button>
-              <Button
-                variant={samePlants === false ? "default" : "outline"}
-                size="lg"
-                className="min-w-[120px]"
-                onClick={() => { setSamePlants(false); setStep(1); }}
-              >
-                {t("common.no")}
-              </Button>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">{t("wizard.samePlantsQuestion")}</p>
+            <div className="flex gap-3">
+              <Button variant={samePlants === true ? "default" : "outline"} onClick={() => { setSamePlants(true); setStep(1); }}>{t("common.yes")}</Button>
+              <Button variant={samePlants === false ? "default" : "outline"} onClick={() => { setSamePlants(false); setStep(1); }}>{t("common.no")}</Button>
             </div>
           </div>
         )}
 
-        {/* Step 1: Surface & Plante */}
         {step === 1 && (
           <div className="space-y-4">
-            {/* Surface info */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div><Label>{t("wizard.surfaceName")}</Label><Input value={nomSurface} onChange={e => setNomSurface(e.target.value)} required /></div>
+              <div><Label>Nom surface</Label><Input value={nomSurface} onChange={(e) => setNomSurface(e.target.value)} /></div>
               <div>
                 <Label>{t("wizard.user")}</Label>
-                <Select value={fkClient} onValueChange={setFkClient}>
-                  <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                  <SelectContent>{clients.map(c => <SelectItem key={c.id} value={c.id}>{c.email}</SelectItem>)}</SelectContent>
+                <Select value={fkUser} onValueChange={setFkUser}>
+                  <SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger>
+                  <SelectContent>{profiles.map((p) => <SelectItem key={p.id} value={p.id}>{p.email || `${p.first_name} ${p.last_name}`}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             </div>
+            <LocationSelector value={localisation} onChange={setLocalisation} />
+            <div><Label>Nb vannes</Label><Input type="number" min="1" value={nbVanne} onChange={(e) => updateNbVanne(Math.max(1, parseInt(e.target.value) || 1))} /></div>
 
-            {/* Location selector */}
-            <div>
-              <Label className="mb-2 block">{t("wizard.location")}</Label>
-              <LocationSelector value={localisation} onChange={setLocalisation} />
-            </div>
-
-            {/* Nombre total plantes */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div><Label>{t("wizard.nbPlanteTotal")}</Label><Input type="number" min="0" value={nbPlanteTotal} onChange={e => setNbPlanteTotal(parseInt(e.target.value) || 0)} /></div>
-              <div><Label>{t("wizard.nbVannes")}</Label><Input type="number" min="1" value={nbVanne} onChange={e => updateNbVanne(Math.max(1, parseInt(e.target.value) || 1))} /></div>
-            </div>
-
-            {/* Plants section */}
             {samePlants ? (
-              /* Single plant */
-              <div className="border rounded-lg p-4 space-y-3">
-                <h4 className="font-semibold text-sm text-foreground">{t("wizard.plantName")}</h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div><Label>{t("wizard.plantName")}</Label><Input value={nomPlante} onChange={e => setNomPlante(e.target.value)} required /></div>
-                  <div><Label>{t("wizard.plantAge")}</Label><Input type="number" min="0" value={agePlante} onChange={e => setAgePlante(parseInt(e.target.value) || 0)} /></div>
-                  <div>
-                    <Label>{t("wizard.plantType")}</Label>
-                    <Select value={fkTypePlante} onValueChange={setFkTypePlante}>
-                      <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                      <SelectContent>{typesList.map(tp => <SelectItem key={tp.id} value={tp.id}>{tp.nomPlante}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div><Label>Nom plante</Label><Input value={nomPlante} onChange={(e) => setNomPlante(e.target.value)} /></div>
+                <div><Label>Âge</Label><Input type="number" min="0" value={agePlante} onChange={(e) => setAgePlante(parseInt(e.target.value) || 0)} /></div>
+                <div>
+                  <Label>Type</Label>
+                  <Select value={fkTypePlante} onValueChange={setFkTypePlante}>
+                    <SelectTrigger><SelectValue placeholder="Type" /></SelectTrigger>
+                    <SelectContent>{typesList.map((tp: any) => <SelectItem key={tp.id} value={tp.id}>{tp.nomPlante}</SelectItem>)}</SelectContent>
+                  </Select>
                 </div>
               </div>
             ) : (
-              /* Multiple plants */
               <div className="space-y-3">
-                {plantEntries.map((p, i) => (
-                  <div key={i} className="border rounded-lg p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-semibold text-sm text-foreground">{t("wizard.plantName")} {i + 1}</h4>
-                      {plantEntries.length > 1 && (
-                        <Button variant="ghost" size="sm" onClick={() => removePlantEntry(i)} className="text-destructive h-7 px-2">
-                          <Trash2 className="h-3 w-3 mr-1" /> {t("wizard.removePlant")}
-                        </Button>
-                      )}
+                {plantEntries.map((pe, idx) => (
+                  <div key={idx} className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end border p-3 rounded-lg">
+                    <div><Label>Nom</Label><Input value={pe.nomPlante} onChange={(e) => updatePlantEntry(idx, "nomPlante", e.target.value)} /></div>
+                    <div><Label>Âge</Label><Input type="number" min="0" value={pe.age} onChange={(e) => updatePlantEntry(idx, "age", parseInt(e.target.value) || 0)} /></div>
+                    <div>
+                      <Label>Type</Label>
+                      <Select value={pe.fkTypePlante} onValueChange={(v) => updatePlantEntry(idx, "fkTypePlante", v)}>
+                        <SelectTrigger><SelectValue placeholder="Type" /></SelectTrigger>
+                        <SelectContent>{typesList.map((tp: any) => <SelectItem key={tp.id} value={tp.id}>{tp.nomPlante}</SelectItem>)}</SelectContent>
+                      </Select>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div><Label>{t("wizard.plantName")}</Label><Input value={p.nomPlante} onChange={e => updatePlantEntry(i, "nomPlante", e.target.value)} required /></div>
-                      <div><Label>{t("wizard.plantAge")}</Label><Input type="number" min="0" value={p.age} onChange={e => updatePlantEntry(i, "age", parseInt(e.target.value) || 0)} /></div>
-                      <div>
-                        <Label>{t("wizard.plantType")}</Label>
-                        <Select value={p.fkTypePlante} onValueChange={v => updatePlantEntry(i, "fkTypePlante", v)}>
-                          <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                          <SelectContent>{typesList.map(tp => <SelectItem key={tp.id} value={tp.id}>{tp.nomPlante}</SelectItem>)}</SelectContent>
-                        </Select>
-                      </div>
-                    </div>
+                    {plantEntries.length > 1 && <Button variant="ghost" size="sm" onClick={() => removePlantEntry(idx)}><Trash2 className="h-4 w-4" /></Button>}
                   </div>
                 ))}
-                <Button variant="outline" size="sm" onClick={addPlantEntry} className="w-full">
-                  <Plus className="h-4 w-4 mr-1" /> {t("wizard.addPlant")}
-                </Button>
+                <Button variant="outline" size="sm" onClick={addPlantEntry}><Plus className="mr-1 h-3 w-3" /> Ajouter plante</Button>
               </div>
             )}
 
-            <div className="flex justify-between">
-              <Button variant="outline" onClick={() => setStep(0)}><ArrowLeft className="mr-2 h-4 w-4" /> {t("wizard.prev")}</Button>
-              <Button onClick={() => setStep(2)} disabled={!canStep1}>{t("wizard.next")} <ArrowRight className="ml-2 h-4 w-4" /></Button>
+            <div className="flex justify-end">
+              <Button onClick={() => setStep(2)} disabled={!canStep1}>{t("common.next")} <ArrowRight className="ml-2 h-4 w-4" /></Button>
             </div>
           </div>
         )}
 
-        {/* Step 2: Vannes */}
         {step === 2 && (
           <div className="space-y-4">
             {vannesData.map((v, i) => (
-              <div key={i} className="border rounded-lg p-3 space-y-3">
-                <h4 className="font-semibold text-sm">Vanne {i + 1}</h4>
-                <div className="grid grid-cols-3 gap-3">
-                  <div><Label>{t("wizard.vanneName")}</Label><Input value={v.nomVanne} onChange={e => { const arr = [...vannesData]; arr[i] = { ...arr[i], nomVanne: e.target.value }; setVannesData(arr); }} /></div>
-                  <div><Label>{t("wizard.vanneNbPlant")}</Label><Input type="number" min="0" value={v.nbPlantParVanne} onChange={e => { const arr = [...vannesData]; arr[i] = { ...arr[i], nbPlantParVanne: parseInt(e.target.value) || 0 }; setVannesData(arr); }} /></div>
-                  <div><Label>{t("wizard.vanneDebit")}</Label><Input type="number" step="0.1" min="0" value={v.debitEauParVanne} onChange={e => { const arr = [...vannesData]; arr[i] = { ...arr[i], debitEauParVanne: parseFloat(e.target.value) || 0 }; setVannesData(arr); }} /></div>
+              <div key={i} className="border rounded-lg p-4 space-y-3">
+                <h4 className="font-semibold">Vanne {i + 1}</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div><Label>Nom</Label><Input value={v.nomVanne} onChange={(e) => { const arr = [...vannesData]; arr[i] = { ...arr[i], nomVanne: e.target.value }; setVannesData(arr); }} /></div>
+                  <div><Label>Nb plantes</Label><Input type="number" min="0" value={v.nbPlantParVanne} onChange={(e) => { const arr = [...vannesData]; arr[i] = { ...arr[i], nbPlantParVanne: parseInt(e.target.value) || 0 }; setVannesData(arr); }} /></div>
+                  <div><Label>Débit (L/h)</Label><Input type="number" step="0.1" min="0" value={v.debitEauParVanne} onChange={(e) => { const arr = [...vannesData]; arr[i] = { ...arr[i], debitEauParVanne: parseFloat(e.target.value) || 0 }; setVannesData(arr); }} /></div>
                 </div>
               </div>
             ))}
             <div className="flex justify-between">
-              <Button variant="outline" onClick={() => setStep(1)}><ArrowLeft className="mr-2 h-4 w-4" /> {t("wizard.prev")}</Button>
-              <Button onClick={handleSave} disabled={saving || !canStep2}><Save className="mr-2 h-4 w-4" /> {saving ? t("wizard.saving") : t("common.save")}</Button>
+              <Button variant="outline" onClick={() => setStep(1)}><ArrowLeft className="mr-2 h-4 w-4" /> {t("common.previous")}</Button>
+              <Button onClick={handleSave} disabled={saving || !canStep2}><Save className="mr-2 h-4 w-4" /> {saving ? "..." : t("common.save")}</Button>
             </div>
           </div>
         )}

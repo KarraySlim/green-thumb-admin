@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getSols, createSol, updateSol, deleteSol, getClimats, createClimat, updateClimat, deleteClimat, getSurfaces, getClients } from "@/services/data-service";
+import { getSols, createSol, updateSol, deleteSol, getClimats, createClimat, updateClimat, deleteClimat, getSurfaces, getProfiles } from "@/services/data-service";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,7 +19,7 @@ export default function CapteurPage() {
   const { data: sols = [] } = useQuery({ queryKey: ["sols"], queryFn: getSols });
   const { data: climats = [] } = useQuery({ queryKey: ["climats"], queryFn: getClimats });
   const { data: surfaces = [] } = useQuery({ queryKey: ["surfaces"], queryFn: getSurfaces });
-  const { data: clients = [] } = useQuery({ queryKey: ["clients"], queryFn: getClients });
+  const { data: profiles = [] } = useQuery({ queryKey: ["profiles"], queryFn: getProfiles });
 
   const [showSolForm, setShowSolForm] = useState(false);
   const [editingSol, setEditingSol] = useState<Sol | null>(null);
@@ -37,7 +37,7 @@ export default function CapteurPage() {
   const getUserForEntity = (entityId: string, field: "fkSol" | "fkClimat") => {
     const surface = surfaces.find(s => s[field] === entityId);
     if (!surface) return { user: null, surface: null };
-    return { user: clients.find(c => c.id === surface.fkClient) ?? null, surface };
+    return { user: profiles.find(p => p.id === surface.fkUser) ?? null, surface };
   };
 
   return (
@@ -78,7 +78,7 @@ export default function CapteurPage() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    {user && <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2"><User className="h-3 w-3" /> {user.firstName} {user.lastName} {surface && `· ${surface.nomSurface}`}</div>}
+                    {user && <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2"><User className="h-3 w-3" /> {user.first_name} {user.last_name} {surface && `· ${surface.nomSurface}`}</div>}
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div><span className="text-muted-foreground">{t("capteur.humidity")}:</span> {s.humidite}%</div>
                       <div><span className="text-muted-foreground">{t("capteur.salinity")}:</span> {s.salinite}</div>
@@ -122,7 +122,7 @@ export default function CapteurPage() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    {user && <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2"><User className="h-3 w-3" /> {user.firstName} {user.lastName} {surface && `· ${surface.nomSurface}`}</div>}
+                    {user && <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2"><User className="h-3 w-3" /> {user.first_name} {user.last_name} {surface && `· ${surface.nomSurface}`}</div>}
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div className="flex items-center gap-1"><Thermometer className="h-3 w-3" /> {c.temperatureC}°C</div>
                       <div className="flex items-center gap-1"><Droplets className="h-3 w-3" /> {c.humiditeC}%</div>
@@ -138,7 +138,6 @@ export default function CapteurPage() {
         </TabsContent>
       </Tabs>
 
-      {/* Edit Sol Dialog */}
       <Dialog open={!!editingSol} onOpenChange={(o) => !o && setEditingSol(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>{t("capteur.editSol")}</DialogTitle></DialogHeader>
@@ -155,7 +154,6 @@ export default function CapteurPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Climat Dialog */}
       <Dialog open={!!editingClimat} onOpenChange={(o) => !o && setEditingClimat(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>{t("capteur.editClimat")}</DialogTitle></DialogHeader>

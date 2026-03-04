@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getSurfaces, createSurface, updateSurface, deleteSurface, getClients } from "@/services/data-service";
+import { getSurfaces, createSurface, updateSurface, deleteSurface, getProfiles } from "@/services/data-service";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -18,18 +18,18 @@ import { Surface } from "@/types/models";
 export default function SurfacesPage() {
   const { t } = useLanguage();
   const [showForm, setShowForm] = useState(false);
-  const [selectedClient, setSelectedClient] = useState("");
+  const [selectedUser, setSelectedUser] = useState("");
   const [localisation, setLocalisation] = useState("");
   const [editing, setEditing] = useState<Surface | null>(null);
   const [editLoc, setEditLoc] = useState("");
   const qc = useQueryClient();
 
   const { data: items = [] } = useQuery({ queryKey: ["surfaces"], queryFn: getSurfaces });
-  const { data: clientsList = [] } = useQuery({ queryKey: ["clients"], queryFn: getClients });
+  const { data: profilesList = [] } = useQuery({ queryKey: ["profiles"], queryFn: getProfiles });
 
   const createMut = useMutation({
     mutationFn: createSurface,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["surfaces"] }); setShowForm(false); setSelectedClient(""); setLocalisation(""); toast({ title: "Surface créée" }); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["surfaces"] }); setShowForm(false); setSelectedUser(""); setLocalisation(""); toast({ title: "Surface créée" }); },
   });
   const updateMut = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<Surface> }) => updateSurface(id, data),
@@ -43,7 +43,7 @@ export default function SurfacesPage() {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    createMut.mutate({ nomSurface: fd.get("nomSurface") as string, localisation, fkClient: selectedClient });
+    createMut.mutate({ nomSurface: fd.get("nomSurface") as string, localisation, fkUser: selectedUser });
   };
 
   return (
@@ -64,14 +64,14 @@ export default function SurfacesPage() {
                 <div><Label>Nom surface</Label><Input name="nomSurface" required /></div>
                 <div>
                   <Label>{t("wizard.user")}</Label>
-                  <Select value={selectedClient} onValueChange={setSelectedClient}>
+                  <Select value={selectedUser} onValueChange={setSelectedUser}>
                     <SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger>
-                    <SelectContent>{clientsList.map((c) => <SelectItem key={c.id} value={c.id}>{c.email}</SelectItem>)}</SelectContent>
+                    <SelectContent>{profilesList.map((p) => <SelectItem key={p.id} value={p.id}>{p.email || `${p.first_name} ${p.last_name}`}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
               </div>
               <LocationSelector value={localisation} onChange={setLocalisation} />
-              <div><Button type="submit" disabled={createMut.isPending || !selectedClient}>{t("common.create")}</Button></div>
+              <div><Button type="submit" disabled={createMut.isPending || !selectedUser}>{t("common.create")}</Button></div>
             </form>
           </CardContent>
         </Card>
@@ -91,7 +91,7 @@ export default function SurfacesPage() {
               {items.map((s) => (
                 <TableRow key={s.id}>
                   <TableCell>{s.nomSurface}</TableCell><TableCell>{s.localisation}</TableCell>
-                  <TableCell>{s.nbVanne}</TableCell><TableCell>{s.clientEmail}</TableCell>
+                  <TableCell>{s.nbVanne}</TableCell><TableCell>{s.userEmail}</TableCell>
                   <TableCell>{s.typeSol ?? "—"}</TableCell>
                   <TableCell>
                     <div className="flex gap-1">

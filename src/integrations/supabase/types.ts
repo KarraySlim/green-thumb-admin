@@ -14,7 +14,76 @@ export type Database = {
   }
   public: {
     Tables: {
-      clients: {
+      climats: {
+        Row: {
+          created_at: string
+          humidite_c: number
+          id: string
+          puissance_ensoleillement: number
+          temperature_c: number
+          vitesse_vent: number
+        }
+        Insert: {
+          created_at?: string
+          humidite_c?: number
+          id?: string
+          puissance_ensoleillement?: number
+          temperature_c?: number
+          vitesse_vent?: number
+        }
+        Update: {
+          created_at?: string
+          humidite_c?: number
+          id?: string
+          puissance_ensoleillement?: number
+          temperature_c?: number
+          vitesse_vent?: number
+        }
+        Relationships: []
+      }
+      plantes: {
+        Row: {
+          age: number
+          created_at: string
+          fk_surface: string | null
+          fk_type_plante: string | null
+          id: string
+          nom_plante: string
+        }
+        Insert: {
+          age?: number
+          created_at?: string
+          fk_surface?: string | null
+          fk_type_plante?: string | null
+          id?: string
+          nom_plante: string
+        }
+        Update: {
+          age?: number
+          created_at?: string
+          fk_surface?: string | null
+          fk_type_plante?: string | null
+          id?: string
+          nom_plante?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plantes_fk_surface_fkey"
+            columns: ["fk_surface"]
+            isOneToOne: false
+            referencedRelation: "surfaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plantes_fk_type_plante_fkey"
+            columns: ["fk_type_plante"]
+            isOneToOne: false
+            referencedRelation: "types_plante"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
         Row: {
           avatar_url: string | null
           city: string | null
@@ -23,87 +92,51 @@ export type Database = {
           date_deb_abo: string | null
           date_exp_abo: string | null
           date_of_birth: string | null
-          email: string
+          email: string | null
           first_name: string | null
           id: string
           last_name: string | null
           location: string | null
           phone_number: string | null
-          preferences: Json | null
-          role: string
           type_abo: string | null
-          updated_at: string
-          user_id: string | null
-        }
-        Insert: {
-          avatar_url?: string | null
-          city?: string | null
-          country?: string | null
-          created_at?: string
-          date_deb_abo?: string | null
-          date_exp_abo?: string | null
-          date_of_birth?: string | null
-          email: string
-          first_name?: string | null
-          id?: string
-          last_name?: string | null
-          location?: string | null
-          phone_number?: string | null
-          preferences?: Json | null
-          role?: string
-          type_abo?: string | null
-          updated_at?: string
-          user_id?: string | null
-        }
-        Update: {
-          avatar_url?: string | null
-          city?: string | null
-          country?: string | null
-          created_at?: string
-          date_deb_abo?: string | null
-          date_exp_abo?: string | null
-          date_of_birth?: string | null
-          email?: string
-          first_name?: string | null
-          id?: string
-          last_name?: string | null
-          location?: string | null
-          phone_number?: string | null
-          preferences?: Json | null
-          role?: string
-          type_abo?: string | null
-          updated_at?: string
-          user_id?: string | null
-        }
-        Relationships: []
-      }
-      profiles: {
-        Row: {
-          avatar_url: string | null
-          created_at: string
-          first_name: string | null
-          id: string
-          last_name: string | null
           updated_at: string
           user_id: string
           user_role: string
         }
         Insert: {
           avatar_url?: string | null
+          city?: string | null
+          country?: string | null
           created_at?: string
+          date_deb_abo?: string | null
+          date_exp_abo?: string | null
+          date_of_birth?: string | null
+          email?: string | null
           first_name?: string | null
           id?: string
           last_name?: string | null
+          location?: string | null
+          phone_number?: string | null
+          type_abo?: string | null
           updated_at?: string
           user_id: string
           user_role?: string
         }
         Update: {
           avatar_url?: string | null
+          city?: string | null
+          country?: string | null
           created_at?: string
+          date_deb_abo?: string | null
+          date_exp_abo?: string | null
+          date_of_birth?: string | null
+          email?: string | null
           first_name?: string | null
           id?: string
           last_name?: string | null
+          location?: string | null
+          phone_number?: string | null
+          type_abo?: string | null
           updated_at?: string
           user_id?: string
           user_role?: string
@@ -185,6 +218,39 @@ export type Database = {
         }
         Relationships: []
       }
+      sols: {
+        Row: {
+          created_at: string
+          date_mesure: string
+          humidite: number
+          id: string
+          nature: string
+          ph: number
+          salinite: number
+          temperature: number
+        }
+        Insert: {
+          created_at?: string
+          date_mesure?: string
+          humidite?: number
+          id?: string
+          nature: string
+          ph?: number
+          salinite?: number
+          temperature?: number
+        }
+        Update: {
+          created_at?: string
+          date_mesure?: string
+          humidite?: number
+          id?: string
+          nature?: string
+          ph?: number
+          salinite?: number
+          temperature?: number
+        }
+        Relationships: []
+      }
       subscription_notifications: {
         Row: {
           client_email: string
@@ -211,6 +277,123 @@ export type Database = {
           sent_at?: string
         }
         Relationships: []
+      }
+      surfaces: {
+        Row: {
+          created_at: string
+          fk_climat: string | null
+          fk_sol: string | null
+          fk_user: string | null
+          id: string
+          localisation: string
+          nom_surface: string
+          type_sol: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          fk_climat?: string | null
+          fk_sol?: string | null
+          fk_user?: string | null
+          id?: string
+          localisation?: string
+          nom_surface: string
+          type_sol?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          fk_climat?: string | null
+          fk_sol?: string | null
+          fk_user?: string | null
+          id?: string
+          localisation?: string
+          nom_surface?: string
+          type_sol?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "surfaces_fk_climat_fkey"
+            columns: ["fk_climat"]
+            isOneToOne: false
+            referencedRelation: "climats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "surfaces_fk_sol_fkey"
+            columns: ["fk_sol"]
+            isOneToOne: false
+            referencedRelation: "sols"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "surfaces_fk_user_fkey"
+            columns: ["fk_user"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      types_plante: {
+        Row: {
+          besoin_eau_par_plante: number
+          created_at: string
+          id: string
+          nom_plante: string
+          type_plante: string
+        }
+        Insert: {
+          besoin_eau_par_plante?: number
+          created_at?: string
+          id?: string
+          nom_plante: string
+          type_plante: string
+        }
+        Update: {
+          besoin_eau_par_plante?: number
+          created_at?: string
+          id?: string
+          nom_plante?: string
+          type_plante?: string
+        }
+        Relationships: []
+      }
+      vannes: {
+        Row: {
+          created_at: string
+          debit_eau_par_vanne: number
+          fk_surface: string | null
+          id: string
+          nb_plant_par_vanne: number
+          nom_vanne: string
+        }
+        Insert: {
+          created_at?: string
+          debit_eau_par_vanne?: number
+          fk_surface?: string | null
+          id?: string
+          nb_plant_par_vanne?: number
+          nom_vanne: string
+        }
+        Update: {
+          created_at?: string
+          debit_eau_par_vanne?: number
+          fk_surface?: string | null
+          id?: string
+          nb_plant_par_vanne?: number
+          nom_vanne?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vannes_fk_surface_fkey"
+            columns: ["fk_surface"]
+            isOneToOne: false
+            referencedRelation: "surfaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

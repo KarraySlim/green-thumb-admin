@@ -1,20 +1,19 @@
-export interface Client {
+export interface Profile {
   id: string;
-  email: string;
-  role: "CLIENT" | "ADMIN";
-  firstName: string;
-  lastName: string;
-  phoneNumber: string;
-  dateOfBirth: string;
-  location: string;
+  user_id: string;
+  email?: string;
+  user_role: string;
+  first_name: string;
+  last_name: string;
+  phone_number?: string;
+  location?: string;
   country?: string;
   city?: string;
-  avatarUrl?: string;
-  preferences?: Record<string, unknown>;
-  // Subscription
-  dateDebAbo?: string;
-  dateExpAbo?: string;
-  typeAbo?: "op1" | "op1_op2" | "full";
+  avatar_url?: string;
+  date_of_birth?: string;
+  date_deb_abo?: string;
+  date_exp_abo?: string;
+  type_abo?: "op1" | "op1_op2" | "full";
 }
 
 export interface TypePlante {
@@ -46,13 +45,13 @@ export interface Surface {
   id: string;
   nomSurface: string;
   localisation: string;
-  nbVanne: number;
   typeSol?: string;
-  fkClient: string;
+  fkUser?: string;
   fkSol?: string;
   fkClimat?: string;
   // joined
-  clientEmail?: string;
+  userEmail?: string;
+  nbVanne?: number;
 }
 
 export interface Plante {

@@ -1,188 +1,312 @@
-import { Client, TypePlante, Surface, Plante, Vanne, Sol, Climat } from "@/types/models";
-import { clients, typesPlante, surfaces, plantes, vannes, sols, climats } from "./mock-data";
+import { supabase } from "@/integrations/supabase/client";
+import { Profile, TypePlante, Surface, Plante, Vanne, Sol, Climat } from "@/types/models";
 
-// Helper
-const uuid = () => crypto.randomUUID();
-
-// ─── Clients ────────────────────────────────────────
-export const getClients = async (): Promise<Client[]> => [...clients];
-
-export const createClient = async (data: Omit<Client, "id">): Promise<Client> => {
-  const c: Client = { id: uuid(), ...data };
-  clients.push(c);
-  return c;
+// ─── Profiles (replaces Clients) ────────────────────
+export const getProfiles = async (): Promise<Profile[]> => {
+  const { data, error } = await supabase.from("profiles").select("*");
+  if (error) throw error;
+  return (data ?? []).map((p: any) => ({
+    id: p.id,
+    user_id: p.user_id,
+    email: p.email ?? "",
+    user_role: p.user_role ?? "CLIENT",
+    first_name: p.first_name ?? "",
+    last_name: p.last_name ?? "",
+    phone_number: p.phone_number ?? "",
+    location: p.location ?? "",
+    country: p.country ?? "",
+    city: p.city ?? "",
+    avatar_url: p.avatar_url ?? "",
+    date_of_birth: p.date_of_birth ?? "",
+    date_deb_abo: p.date_deb_abo ?? "",
+    date_exp_abo: p.date_exp_abo ?? "",
+    type_abo: p.type_abo ?? undefined,
+  }));
 };
 
-export const updateClient = async (id: string, data: Partial<Client>): Promise<Client | null> => {
-  const idx = clients.findIndex((c) => c.id === id);
-  if (idx === -1) return null;
-  clients[idx] = { ...clients[idx], ...data };
-  return clients[idx];
-};
+export const updateProfile = async (id: string, data: Partial<Profile>): Promise<Profile | null> => {
+  const dbData: any = {};
+  if (data.first_name !== undefined) dbData.first_name = data.first_name;
+  if (data.last_name !== undefined) dbData.last_name = data.last_name;
+  if (data.user_role !== undefined) dbData.user_role = data.user_role;
+  if (data.phone_number !== undefined) dbData.phone_number = data.phone_number;
+  if (data.location !== undefined) dbData.location = data.location;
+  if (data.email !== undefined) dbData.email = data.email;
+  if (data.date_deb_abo !== undefined) dbData.date_deb_abo = data.date_deb_abo || null;
+  if (data.date_exp_abo !== undefined) dbData.date_exp_abo = data.date_exp_abo || null;
+  if (data.type_abo !== undefined) dbData.type_abo = data.type_abo || null;
 
-export const deleteClient = async (id: string): Promise<void> => {
-  const idx = clients.findIndex((c) => c.id === id);
-  if (idx !== -1) clients.splice(idx, 1);
+  const { data: result, error } = await supabase
+    .from("profiles")
+    .update(dbData as any)
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw error;
+  return result as any;
 };
 
 // ─── Types Plante ───────────────────────────────────
-export const getTypesPlante = async (): Promise<TypePlante[]> => [...typesPlante];
+export const getTypesPlante = async (): Promise<TypePlante[]> => {
+  const { data, error } = await supabase.from("types_plante").select("*");
+  if (error) throw error;
+  return (data ?? []).map((t: any) => ({
+    id: t.id,
+    nomPlante: t.nom_plante,
+    typePlante: t.type_plante,
+    besoinEauParPlante: Number(t.besoin_eau_par_plante),
+  }));
+};
 
-export const createTypePlante = async (data: Omit<TypePlante, "id">): Promise<TypePlante> => {
-  const t: TypePlante = { id: uuid(), ...data };
-  typesPlante.push(t);
-  return t;
+export const createTypePlante = async (d: Omit<TypePlante, "id">): Promise<TypePlante> => {
+  const { data, error } = await supabase.from("types_plante").insert({
+    nom_plante: d.nomPlante,
+    type_plante: d.typePlante,
+    besoin_eau_par_plante: d.besoinEauParPlante,
+  } as any).select().single();
+  if (error) throw error;
+  return { id: data.id, nomPlante: (data as any).nom_plante, typePlante: (data as any).type_plante, besoinEauParPlante: Number((data as any).besoin_eau_par_plante) };
+};
+
+export const updateTypePlante = async (id: string, d: Partial<TypePlante>): Promise<TypePlante | null> => {
+  const dbData: any = {};
+  if (d.nomPlante !== undefined) dbData.nom_plante = d.nomPlante;
+  if (d.typePlante !== undefined) dbData.type_plante = d.typePlante;
+  if (d.besoinEauParPlante !== undefined) dbData.besoin_eau_par_plante = d.besoinEauParPlante;
+  const { data, error } = await supabase.from("types_plante").update(dbData as any).eq("id", id).select().single();
+  if (error) throw error;
+  return { id: data.id, nomPlante: (data as any).nom_plante, typePlante: (data as any).type_plante, besoinEauParPlante: Number((data as any).besoin_eau_par_plante) };
 };
 
 export const deleteTypePlante = async (id: string): Promise<void> => {
-  const idx = typesPlante.findIndex((t) => t.id === id);
-  if (idx !== -1) typesPlante.splice(idx, 1);
+  const { error } = await supabase.from("types_plante").delete().eq("id", id);
+  if (error) throw error;
 };
 
 // ─── Surfaces ───────────────────────────────────────
 export const getSurfaces = async (): Promise<Surface[]> => {
-  return surfaces.map((s) => ({
-    ...s,
-    clientEmail: clients.find((c) => c.id === s.fkClient)?.email ?? "—",
-    nbVanne: vannes.filter((v) => v.fkSurface === s.id).length,
+  const { data, error } = await supabase.from("surfaces").select("*");
+  if (error) throw error;
+  const { data: profiles } = await supabase.from("profiles").select("id, email");
+  const { data: vannes } = await supabase.from("vannes").select("id, fk_surface");
+  const profileMap = new Map((profiles ?? []).map((p: any) => [p.id, p.email]));
+
+  return (data ?? []).map((s: any) => ({
+    id: s.id,
+    nomSurface: s.nom_surface,
+    localisation: s.localisation,
+    typeSol: s.type_sol,
+    fkUser: s.fk_user,
+    fkSol: s.fk_sol,
+    fkClimat: s.fk_climat,
+    userEmail: profileMap.get(s.fk_user) ?? "—",
+    nbVanne: (vannes ?? []).filter((v: any) => v.fk_surface === s.id).length,
   }));
 };
 
-export const createSurface = async (data: Omit<Surface, "id" | "nbVanne" | "clientEmail">): Promise<Surface> => {
-  const s: Surface = { id: uuid(), nbVanne: 0, clientEmail: clients.find((c) => c.id === data.fkClient)?.email, ...data };
-  surfaces.push(s);
-  return s;
+export const createSurface = async (d: { nomSurface: string; localisation: string; fkUser: string }): Promise<Surface> => {
+  const { data, error } = await supabase.from("surfaces").insert({
+    nom_surface: d.nomSurface,
+    localisation: d.localisation,
+    fk_user: d.fkUser,
+  } as any).select().single();
+  if (error) throw error;
+  return { id: data.id, nomSurface: (data as any).nom_surface, localisation: (data as any).localisation, fkUser: (data as any).fk_user };
 };
 
-export const updateSurface = async (id: string, data: Partial<Surface>): Promise<Surface | null> => {
-  const idx = surfaces.findIndex((s) => s.id === id);
-  if (idx === -1) return null;
-  surfaces[idx] = { ...surfaces[idx], ...data };
-  return surfaces[idx];
+export const updateSurface = async (id: string, d: Partial<Surface>): Promise<Surface | null> => {
+  const dbData: any = {};
+  if (d.nomSurface !== undefined) dbData.nom_surface = d.nomSurface;
+  if (d.localisation !== undefined) dbData.localisation = d.localisation;
+  if (d.typeSol !== undefined) dbData.type_sol = d.typeSol;
+  if (d.fkSol !== undefined) dbData.fk_sol = d.fkSol;
+  if (d.fkClimat !== undefined) dbData.fk_climat = d.fkClimat;
+  const { data, error } = await supabase.from("surfaces").update(dbData as any).eq("id", id).select().single();
+  if (error) throw error;
+  return { id: data.id, nomSurface: (data as any).nom_surface, localisation: (data as any).localisation } as Surface;
 };
 
 export const deleteSurface = async (id: string): Promise<void> => {
-  for (let i = plantes.length - 1; i >= 0; i--) if (plantes[i].fkSurface === id) plantes.splice(i, 1);
-  for (let i = vannes.length - 1; i >= 0; i--) if (vannes[i].fkSurface === id) vannes.splice(i, 1);
-  const idx = surfaces.findIndex((s) => s.id === id);
-  if (idx !== -1) surfaces.splice(idx, 1);
+  const { error } = await supabase.from("surfaces").delete().eq("id", id);
+  if (error) throw error;
 };
 
 // ─── Plantes ────────────────────────────────────────
 export const getPlantes = async (): Promise<Plante[]> => {
-  return plantes.map((p) => ({
-    ...p,
-    surfaceNom: surfaces.find((s) => s.id === p.fkSurface)?.nomSurface ?? "—",
-    typePlanteNom: typesPlante.find((t) => t.id === p.fkTypePlante)?.nomPlante ?? "—",
+  const { data, error } = await supabase.from("plantes").select("*");
+  if (error) throw error;
+  const { data: surfaces } = await supabase.from("surfaces").select("id, nom_surface");
+  const { data: types } = await supabase.from("types_plante").select("id, nom_plante");
+  const surfMap = new Map((surfaces ?? []).map((s: any) => [s.id, s.nom_surface]));
+  const typeMap = new Map((types ?? []).map((t: any) => [t.id, t.nom_plante]));
+
+  return (data ?? []).map((p: any) => ({
+    id: p.id,
+    nomPlante: p.nom_plante,
+    age: p.age,
+    fkTypePlante: p.fk_type_plante ?? "",
+    fkSurface: p.fk_surface ?? "",
+    surfaceNom: surfMap.get(p.fk_surface) ?? "—",
+    typePlanteNom: typeMap.get(p.fk_type_plante) ?? "—",
   }));
 };
 
-export const createPlante = async (data: Omit<Plante, "id" | "surfaceNom" | "typePlanteNom">): Promise<Plante> => {
-  const p: Plante = {
-    id: uuid(),
-    ...data,
-    surfaceNom: surfaces.find((s) => s.id === data.fkSurface)?.nomSurface,
-    typePlanteNom: typesPlante.find((t) => t.id === data.fkTypePlante)?.nomPlante,
-  };
-  plantes.push(p);
-  return p;
+export const createPlante = async (d: Omit<Plante, "id" | "surfaceNom" | "typePlanteNom">): Promise<Plante> => {
+  const { data, error } = await supabase.from("plantes").insert({
+    nom_plante: d.nomPlante,
+    age: d.age,
+    fk_type_plante: d.fkTypePlante,
+    fk_surface: d.fkSurface,
+  } as any).select().single();
+  if (error) throw error;
+  return { id: data.id, nomPlante: (data as any).nom_plante, age: (data as any).age, fkTypePlante: (data as any).fk_type_plante, fkSurface: (data as any).fk_surface };
+};
+
+export const updatePlante = async (id: string, d: Partial<Plante>): Promise<Plante | null> => {
+  const dbData: any = {};
+  if (d.nomPlante !== undefined) dbData.nom_plante = d.nomPlante;
+  if (d.age !== undefined) dbData.age = d.age;
+  if (d.fkTypePlante !== undefined) dbData.fk_type_plante = d.fkTypePlante;
+  if (d.fkSurface !== undefined) dbData.fk_surface = d.fkSurface;
+  const { data, error } = await supabase.from("plantes").update(dbData as any).eq("id", id).select().single();
+  if (error) throw error;
+  return { id: data.id, nomPlante: (data as any).nom_plante, age: (data as any).age, fkTypePlante: (data as any).fk_type_plante, fkSurface: (data as any).fk_surface };
 };
 
 export const deletePlante = async (id: string): Promise<void> => {
-  const idx = plantes.findIndex((p) => p.id === id);
-  if (idx !== -1) plantes.splice(idx, 1);
+  const { error } = await supabase.from("plantes").delete().eq("id", id);
+  if (error) throw error;
 };
 
 // ─── Vannes ─────────────────────────────────────────
 export const getVannes = async (): Promise<Vanne[]> => {
-  return vannes.map((v) => ({
-    ...v,
-    surfaceNom: surfaces.find((s) => s.id === v.fkSurface)?.nomSurface ?? "—",
+  const { data, error } = await supabase.from("vannes").select("*");
+  if (error) throw error;
+  const { data: surfaces } = await supabase.from("surfaces").select("id, nom_surface");
+  const surfMap = new Map((surfaces ?? []).map((s: any) => [s.id, s.nom_surface]));
+
+  return (data ?? []).map((v: any) => ({
+    id: v.id,
+    nomVanne: v.nom_vanne,
+    nbPlantParVanne: v.nb_plant_par_vanne,
+    debitEauParVanne: Number(v.debit_eau_par_vanne),
+    fkSurface: v.fk_surface ?? "",
+    surfaceNom: surfMap.get(v.fk_surface) ?? "—",
   }));
 };
 
-export const createVanne = async (data: Omit<Vanne, "id" | "surfaceNom">): Promise<Vanne> => {
-  const v: Vanne = {
-    id: uuid(),
-    ...data,
-    surfaceNom: surfaces.find((s) => s.id === data.fkSurface)?.nomSurface,
-  };
-  vannes.push(v);
-  const surf = surfaces.find((s) => s.id === data.fkSurface);
-  if (surf) surf.nbVanne = vannes.filter((vn) => vn.fkSurface === surf.id).length;
-  return v;
+export const createVanne = async (d: Omit<Vanne, "id" | "surfaceNom">): Promise<Vanne> => {
+  const { data, error } = await supabase.from("vannes").insert({
+    nom_vanne: d.nomVanne,
+    nb_plant_par_vanne: d.nbPlantParVanne,
+    debit_eau_par_vanne: d.debitEauParVanne,
+    fk_surface: d.fkSurface,
+  } as any).select().single();
+  if (error) throw error;
+  return { id: data.id, nomVanne: (data as any).nom_vanne, nbPlantParVanne: (data as any).nb_plant_par_vanne, debitEauParVanne: Number((data as any).debit_eau_par_vanne), fkSurface: (data as any).fk_surface };
+};
+
+export const updateVanne = async (id: string, d: Partial<Vanne>): Promise<Vanne | null> => {
+  const dbData: any = {};
+  if (d.nomVanne !== undefined) dbData.nom_vanne = d.nomVanne;
+  if (d.nbPlantParVanne !== undefined) dbData.nb_plant_par_vanne = d.nbPlantParVanne;
+  if (d.debitEauParVanne !== undefined) dbData.debit_eau_par_vanne = d.debitEauParVanne;
+  if (d.fkSurface !== undefined) dbData.fk_surface = d.fkSurface;
+  const { data, error } = await supabase.from("vannes").update(dbData as any).eq("id", id).select().single();
+  if (error) throw error;
+  return { id: data.id, nomVanne: (data as any).nom_vanne, nbPlantParVanne: (data as any).nb_plant_par_vanne, debitEauParVanne: Number((data as any).debit_eau_par_vanne), fkSurface: (data as any).fk_surface };
 };
 
 export const deleteVanne = async (id: string): Promise<void> => {
-  const vanne = vannes.find((v) => v.id === id);
-  const idx = vannes.findIndex((v) => v.id === id);
-  if (idx !== -1) vannes.splice(idx, 1);
-  if (vanne) {
-    const surf = surfaces.find((s) => s.id === vanne.fkSurface);
-    if (surf) surf.nbVanne = vannes.filter((vn) => vn.fkSurface === surf.id).length;
-  }
+  const { error } = await supabase.from("vannes").delete().eq("id", id);
+  if (error) throw error;
 };
 
 // ─── Sols ───────────────────────────────────────────
-export const getSols = async (): Promise<Sol[]> => [...sols];
+export const getSols = async (): Promise<Sol[]> => {
+  const { data, error } = await supabase.from("sols").select("*");
+  if (error) throw error;
+  return (data ?? []).map((s: any) => ({
+    id: s.id,
+    nature: s.nature,
+    humidite: Number(s.humidite),
+    salinite: Number(s.salinite),
+    ph: Number(s.ph),
+    temperature: Number(s.temperature),
+    dateMesure: s.date_mesure,
+  }));
+};
 
-export const createSol = async (data: Omit<Sol, "id">): Promise<Sol> => {
-  const s: Sol = { id: uuid(), ...data };
-  sols.push(s);
-  return s;
+export const createSol = async (d: Omit<Sol, "id">): Promise<Sol> => {
+  const { data, error } = await supabase.from("sols").insert({
+    nature: d.nature,
+    humidite: d.humidite,
+    salinite: d.salinite,
+    ph: d.ph,
+    temperature: d.temperature,
+    date_mesure: d.dateMesure,
+  } as any).select().single();
+  if (error) throw error;
+  return { id: data.id, nature: (data as any).nature, humidite: Number((data as any).humidite), salinite: Number((data as any).salinite), ph: Number((data as any).ph), temperature: Number((data as any).temperature), dateMesure: (data as any).date_mesure };
+};
+
+export const updateSol = async (id: string, d: Partial<Sol>): Promise<Sol | null> => {
+  const dbData: any = {};
+  if (d.nature !== undefined) dbData.nature = d.nature;
+  if (d.humidite !== undefined) dbData.humidite = d.humidite;
+  if (d.salinite !== undefined) dbData.salinite = d.salinite;
+  if (d.ph !== undefined) dbData.ph = d.ph;
+  if (d.temperature !== undefined) dbData.temperature = d.temperature;
+  const { data, error } = await supabase.from("sols").update(dbData as any).eq("id", id).select().single();
+  if (error) throw error;
+  return { id: data.id, nature: (data as any).nature, humidite: Number((data as any).humidite), salinite: Number((data as any).salinite), ph: Number((data as any).ph), temperature: Number((data as any).temperature), dateMesure: (data as any).date_mesure };
 };
 
 export const deleteSol = async (id: string): Promise<void> => {
-  const idx = sols.findIndex((s) => s.id === id);
-  if (idx !== -1) sols.splice(idx, 1);
+  const { error } = await supabase.from("sols").delete().eq("id", id);
+  if (error) throw error;
 };
 
 // ─── Climats ────────────────────────────────────────
-export const getClimats = async (): Promise<Climat[]> => [...climats];
+export const getClimats = async (): Promise<Climat[]> => {
+  const { data, error } = await supabase.from("climats").select("*");
+  if (error) throw error;
+  return (data ?? []).map((c: any) => ({
+    id: c.id,
+    temperatureC: Number(c.temperature_c),
+    humiditeC: Number(c.humidite_c),
+    vitesseVent: Number(c.vitesse_vent),
+    puissanceEnsoleillement: Number(c.puissance_ensoleillement),
+  }));
+};
 
-export const createClimat = async (data: Omit<Climat, "id">): Promise<Climat> => {
-  const c: Climat = { id: uuid(), ...data };
-  climats.push(c);
-  return c;
+export const createClimat = async (d: Omit<Climat, "id">): Promise<Climat> => {
+  const { data, error } = await supabase.from("climats").insert({
+    temperature_c: d.temperatureC,
+    humidite_c: d.humiditeC,
+    vitesse_vent: d.vitesseVent,
+    puissance_ensoleillement: d.puissanceEnsoleillement,
+  } as any).select().single();
+  if (error) throw error;
+  return { id: data.id, temperatureC: Number((data as any).temperature_c), humiditeC: Number((data as any).humidite_c), vitesseVent: Number((data as any).vitesse_vent), puissanceEnsoleillement: Number((data as any).puissance_ensoleillement) };
+};
+
+export const updateClimat = async (id: string, d: Partial<Climat>): Promise<Climat | null> => {
+  const dbData: any = {};
+  if (d.temperatureC !== undefined) dbData.temperature_c = d.temperatureC;
+  if (d.humiditeC !== undefined) dbData.humidite_c = d.humiditeC;
+  if (d.vitesseVent !== undefined) dbData.vitesse_vent = d.vitesseVent;
+  if (d.puissanceEnsoleillement !== undefined) dbData.puissance_ensoleillement = d.puissanceEnsoleillement;
+  const { data, error } = await supabase.from("climats").update(dbData as any).eq("id", id).select().single();
+  if (error) throw error;
+  return { id: data.id, temperatureC: Number((data as any).temperature_c), humiditeC: Number((data as any).humidite_c), vitesseVent: Number((data as any).vitesse_vent), puissanceEnsoleillement: Number((data as any).puissance_ensoleillement) };
 };
 
 export const deleteClimat = async (id: string): Promise<void> => {
-  const idx = climats.findIndex((c) => c.id === id);
-  if (idx !== -1) climats.splice(idx, 1);
+  const { error } = await supabase.from("climats").delete().eq("id", id);
+  if (error) throw error;
 };
 
-// ─── Update functions ──────────────────────────────
-export const updateTypePlante = async (id: string, data: Partial<TypePlante>): Promise<TypePlante | null> => {
-  const idx = typesPlante.findIndex((t) => t.id === id);
-  if (idx === -1) return null;
-  typesPlante[idx] = { ...typesPlante[idx], ...data };
-  return typesPlante[idx];
-};
-
-export const updatePlante = async (id: string, data: Partial<Plante>): Promise<Plante | null> => {
-  const idx = plantes.findIndex((p) => p.id === id);
-  if (idx === -1) return null;
-  plantes[idx] = { ...plantes[idx], ...data };
-  return plantes[idx];
-};
-
-export const updateVanne = async (id: string, data: Partial<Vanne>): Promise<Vanne | null> => {
-  const idx = vannes.findIndex((v) => v.id === id);
-  if (idx === -1) return null;
-  vannes[idx] = { ...vannes[idx], ...data };
-  return vannes[idx];
-};
-
-export const updateSol = async (id: string, data: Partial<Sol>): Promise<Sol | null> => {
-  const idx = sols.findIndex((s) => s.id === id);
-  if (idx === -1) return null;
-  sols[idx] = { ...sols[idx], ...data };
-  return sols[idx];
-};
-
-export const updateClimat = async (id: string, data: Partial<Climat>): Promise<Climat | null> => {
-  const idx = climats.findIndex((c) => c.id === id);
-  if (idx === -1) return null;
-  climats[idx] = { ...climats[idx], ...data };
-  return climats[idx];
-};
+// Legacy aliases for backward compatibility
+export const getClients = getProfiles;
+export const updateClient = updateProfile;
