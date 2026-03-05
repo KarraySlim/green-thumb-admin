@@ -21,13 +21,25 @@ export default function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
       toast({ title: "Erreur", description: error.message, variant: "destructive" });
-    } else {
-      navigate("/admin/travail");
+      return;
     }
+    // Check role - CLIENT cannot access admin
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("user_role")
+      .eq("user_id", authData.user.id)
+      .single();
+    
+    if (profile?.user_role === "CLIENT") {
+      await supabase.auth.signOut();
+      toast({ title: "Accès refusé", description: "Les clients n'ont pas accès à l'interface d'administration.", variant: "destructive" });
+      return;
+    }
+    navigate("/admin/dashboard");
   };
 
   const handleGoogleLogin = async () => {

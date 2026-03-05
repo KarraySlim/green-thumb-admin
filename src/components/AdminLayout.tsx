@@ -14,14 +14,14 @@ import {
 } from "@/components/ui/sidebar";
 
 const navItems = [
-  { titleKey: "nav.dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
-  { titleKey: "nav.travail", url: "/admin/travail", icon: Briefcase },
-  { titleKey: "nav.surfaces", url: "/admin/surfaces", icon: Grid3X3 },
-  { titleKey: "nav.donneesDetaillees", url: "/admin/donnees-detaillees", icon: Database },
-  { titleKey: "nav.capteurs", url: "/admin/capteurs", icon: Cpu },
-  { titleKey: "nav.users", url: "/admin/users", icon: Users },
-  { titleKey: "nav.subscriptions", url: "/admin/subscriptions", icon: CreditCard },
-  { titleKey: "nav.rapportSol", url: "/admin/rapport-sol", icon: FlaskConical },
+  { titleKey: "nav.dashboard", url: "/admin/dashboard", icon: LayoutDashboard, roles: ["ADMIN", "SOUS_ADMIN"] },
+  { titleKey: "nav.travail", url: "/admin/travail", icon: Briefcase, roles: ["ADMIN", "SOUS_ADMIN"] },
+  { titleKey: "nav.surfaces", url: "/admin/surfaces", icon: Grid3X3, roles: ["ADMIN", "SOUS_ADMIN"] },
+  { titleKey: "nav.donneesDetaillees", url: "/admin/donnees-detaillees", icon: Database, roles: ["ADMIN", "SOUS_ADMIN"] },
+  { titleKey: "nav.capteurs", url: "/admin/capteurs", icon: Cpu, roles: ["ADMIN", "SOUS_ADMIN"] },
+  { titleKey: "nav.users", url: "/admin/users", icon: Users, roles: ["ADMIN"] },
+  { titleKey: "nav.subscriptions", url: "/admin/subscriptions", icon: CreditCard, roles: ["ADMIN"] },
+  { titleKey: "nav.rapportSol", url: "/admin/rapport-sol", icon: FlaskConical, roles: ["ADMIN", "SOUS_ADMIN"] },
 ];
 
 const pageTitleKeys: Record<string, string> = {
@@ -41,6 +41,7 @@ export default function AdminLayout() {
   const navigate = useNavigate();
   const { user, profile, loading, signOut } = useAuth();
   const { t } = useLanguage();
+  const userRole = profile?.user_role ?? "CLIENT";
   const titleKey = pageTitleKeys[location.pathname];
   const title = titleKey ? t(titleKey) : "Administration";
 
@@ -53,6 +54,12 @@ export default function AdminLayout() {
   }
 
   if (!user) return <Navigate to="/auth/login" replace />;
+
+  // Block CLIENT role from admin
+  if (userRole === "CLIENT") {
+    signOut();
+    return <Navigate to="/auth/login" replace />;
+  }
 
   if (location.pathname === "/admin" || location.pathname === "/admin/") {
     return <Navigate to="/admin/dashboard" replace />;
@@ -97,7 +104,7 @@ export default function AdminLayout() {
               <SidebarGroupLabel>{t("nav.navigation")}</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {navItems.map((item) => (
+                  {navItems.filter(item => item.roles.includes(userRole)).map((item) => (
                     <SidebarMenuItem key={item.titleKey}>
                       <SidebarMenuButton asChild>
                         <NavLink to={item.url} end className="hover:bg-sidebar-accent/50" activeClassName="bg-primary/10 text-primary font-medium">

@@ -89,6 +89,7 @@ export type Database = {
           city: string | null
           country: string | null
           created_at: string
+          created_by: string | null
           date_deb_abo: string | null
           date_exp_abo: string | null
           date_of_birth: string | null
@@ -108,6 +109,7 @@ export type Database = {
           city?: string | null
           country?: string | null
           created_at?: string
+          created_by?: string | null
           date_deb_abo?: string | null
           date_exp_abo?: string | null
           date_of_birth?: string | null
@@ -127,6 +129,7 @@ export type Database = {
           city?: string | null
           country?: string | null
           created_at?: string
+          created_by?: string | null
           date_deb_abo?: string | null
           date_exp_abo?: string | null
           date_of_birth?: string | null
@@ -412,6 +415,8 @@ export type Database = {
           last_name: string
         }[]
       }
+      get_profile_id: { Args: { _user_id: string }; Returns: string }
+      get_user_role: { Args: { _user_id: string }; Returns: string }
     }
     Enums: {
       [_ in never]: never

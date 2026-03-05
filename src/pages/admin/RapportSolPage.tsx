@@ -2,6 +2,9 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { getProfiles } from "@/services/data-service";
+import { useFilteredProfiles } from "@/hooks/useRoleFilter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -216,19 +219,17 @@ export default function RapportSolPage() {
     return isNaN(n) ? null : n;
   };
 
-  const { data: clients = [] } = useQuery<DbClient[]>({
-    queryKey: ["auth-users-for-reports"],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_all_auth_users");
-      if (error) throw error;
-      return (data ?? []).map((u: any) => ({
-        id: u.id,
-        first_name: u.first_name || null,
-        last_name: u.last_name || null,
-        email: u.email,
-      }));
-    },
-  });
+  const { data: allProfiles = [] } = useQuery({ queryKey: ["profiles"], queryFn: getProfiles });
+  const filteredProfiles = useFilteredProfiles(allProfiles.filter(p => p.user_role === "CLIENT"));
+  
+  const clients: DbClient[] = useMemo(() => filteredProfiles.map(p => ({
+    id: p.user_id,
+    first_name: p.first_name || null,
+    last_name: p.last_name || null,
+    email: p.email || "",
+  })), [filteredProfiles]);
+
+
   const { data: reports = [] } = useQuery({
     queryKey: ["soil_reports"],
     queryFn: async () => {

@@ -14,6 +14,7 @@ export interface Profile {
   date_deb_abo?: string;
   date_exp_abo?: string;
   type_abo?: "op1" | "op1_op2" | "full";
+  created_by?: string;
 }
 
 export interface TypePlante {

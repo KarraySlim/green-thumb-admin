@@ -1,5 +1,7 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getProfiles, getSurfaces } from "@/services/data-service";
+import { useFilteredProfiles } from "@/hooks/useRoleFilter";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,8 +13,12 @@ const COLORS = ["hsl(145,63%,32%)", "hsl(145,63%,50%)", "hsl(140,30%,70%)", "hsl
 
 export default function DashboardPage() {
   const { t } = useLanguage();
-  const { data: profiles = [] } = useQuery({ queryKey: ["profiles"], queryFn: getProfiles });
-  const { data: surfaces = [] } = useQuery({ queryKey: ["surfaces"], queryFn: getSurfaces });
+  const { data: allProfiles = [] } = useQuery({ queryKey: ["profiles"], queryFn: getProfiles });
+  const profiles = useFilteredProfiles(allProfiles.filter(p => p.user_role === "CLIENT"));
+  const { data: allSurfaces = [] } = useQuery({ queryKey: ["surfaces"], queryFn: getSurfaces });
+  
+  const visibleIds = useMemo(() => new Set(profiles.map(p => p.id)), [profiles]);
+  const surfaces = useMemo(() => allSurfaces.filter(s => !s.fkUser || visibleIds.has(s.fkUser)), [allSurfaces, visibleIds]);
   const { data: notifications = [] } = useQuery({
     queryKey: ["subscription_notifications"],
     queryFn: async () => {
