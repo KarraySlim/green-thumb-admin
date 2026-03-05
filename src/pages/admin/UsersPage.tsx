@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { DeleteDialog } from "@/components/DeleteDialog";
 import { toast } from "@/hooks/use-toast";
-import { Pencil, CheckCircle, Clock, Search } from "lucide-react";
+import { Pencil, CheckCircle, Clock, Search, Plus } from "lucide-react";
 
 interface AuthUser {
   id: string;
@@ -30,9 +30,12 @@ interface AuthUser {
 
 export default function UsersPage() {
   const { t } = useLanguage();
+  const { user: currentUser, profile: currentProfile } = useAuth();
   const [editing, setEditing] = useState<AuthUser | null>(null);
+  const [creating, setCreating] = useState(false);
   const [search, setSearch] = useState("");
   const qc = useQueryClient();
+  const isAdmin = currentProfile?.user_role === "ADMIN";
 
   const { data: authUsers = [] } = useQuery<AuthUser[]>({
     queryKey: ["auth-users"],
@@ -101,6 +104,48 @@ export default function UsersPage() {
     },
   });
 
+  const createMut = useMutation({
+    mutationFn: async (payload: {
+      email: string;
+      password: string;
+      firstName: string;
+      lastName: string;
+      role: string;
+      phone: string;
+      location: string;
+    }) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await supabase.functions.invoke("create-user", {
+        body: payload,
+      });
+      if (res.error) throw res.error;
+      if (res.data?.error) throw new Error(res.data.error);
+      return res.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["auth-users"] });
+      setCreating(false);
+      toast({ title: "Utilisateur créé avec succès" });
+    },
+    onError: (err: any) => {
+      toast({ title: "Erreur", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const handleCreateSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    createMut.mutate({
+      email: fd.get("email") as string,
+      password: fd.get("password") as string,
+      firstName: fd.get("firstName") as string,
+      lastName: fd.get("lastName") as string,
+      role: fd.get("role") as string,
+      phone: fd.get("phone") as string,
+      location: fd.get("location") as string,
+    });
+  };
+
   const filtered = authUsers.filter((u) =>
     `${u.first_name} ${u.last_name} ${u.email}`.toLowerCase().includes(search.toLowerCase())
   );
@@ -132,11 +177,17 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <h2 className="text-2xl font-bold text-foreground">{t("users.title")}</h2>
-        <div className="relative w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Rechercher..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+        <div className="flex items-center gap-3">
+          <div className="relative w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Rechercher..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+          </div>
+          <Button onClick={() => setCreating(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Ajouter
+          </Button>
         </div>
       </div>
 
@@ -239,6 +290,60 @@ export default function UsersPage() {
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setEditing(null)}>{t("common.cancel")}</Button>
               <Button type="submit" disabled={updateMut.isPending}>{t("common.save")}</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create User Dialog */}
+      <Dialog open={creating} onOpenChange={setCreating}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ajouter un utilisateur</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCreateSubmit} className="space-y-4">
+            <div>
+              <Label>Email *</Label>
+              <Input name="email" type="email" required />
+            </div>
+            <div>
+              <Label>Mot de passe *</Label>
+              <Input name="password" type="password" required minLength={6} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>{t("auth.firstName")} *</Label>
+                <Input name="firstName" required />
+              </div>
+              <div>
+                <Label>{t("auth.lastName")} *</Label>
+                <Input name="lastName" required />
+              </div>
+            </div>
+            <div>
+              <Label>Rôle</Label>
+              <Select name="role" defaultValue="CLIENT">
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {isAdmin && <SelectItem value="ADMIN">Admin</SelectItem>}
+                  {isAdmin && <SelectItem value="SOUS_ADMIN">Sous-admin</SelectItem>}
+                  <SelectItem value="CLIENT">Client</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>{t("auth.phone")}</Label>
+              <Input name="phone" />
+            </div>
+            <div>
+              <Label>{t("surface.location")}</Label>
+              <Input name="location" />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setCreating(false)}>{t("common.cancel")}</Button>
+              <Button type="submit" disabled={createMut.isPending}>
+                {createMut.isPending ? "Création..." : "Créer"}
+              </Button>
             </div>
           </form>
         </DialogContent>
