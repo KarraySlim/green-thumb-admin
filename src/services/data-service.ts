@@ -21,6 +21,7 @@ export const getProfiles = async (): Promise<Profile[]> => {
     date_deb_abo: p.date_deb_abo ?? "",
     date_exp_abo: p.date_exp_abo ?? "",
     type_abo: p.type_abo ?? undefined,
+    created_by: p.created_by ?? undefined,
   }));
 };
 

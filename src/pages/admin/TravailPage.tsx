@@ -1,6 +1,8 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getProfiles, getSurfaces, getVannes, getTypesPlante, updateProfile, updateSurface, createSurface, createPlante, createVanne } from "@/services/data-service";
+import { useFilteredProfiles } from "@/hooks/useRoleFilter";
+import { useAuth } from "@/hooks/useAuth";
 import LocationSelector from "@/components/LocationSelector";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,10 +52,13 @@ export default function TravailPage() {
   const [editingSurface, setEditingSurface] = useState<Surface | null>(null);
   const [showWizard, setShowWizard] = useState(false);
 
-  const { data: profiles = [] } = useQuery({ queryKey: ["profiles"], queryFn: getProfiles });
+  const { data: allProfiles = [] } = useQuery({ queryKey: ["profiles"], queryFn: getProfiles });
   const { data: surfaces = [] } = useQuery({ queryKey: ["surfaces"], queryFn: getSurfaces });
   const { data: vannes = [] } = useQuery({ queryKey: ["vannes"], queryFn: getVannes });
   const { data: typesList = [] } = useQuery({ queryKey: ["types-plante"], queryFn: getTypesPlante });
+  
+  // Filter profiles based on role
+  const profiles = useFilteredProfiles(allProfiles.filter(p => p.user_role === "CLIENT"));
 
   const updateProfileMut = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<Profile> }) => updateProfile(id, data),
