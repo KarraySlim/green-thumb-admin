@@ -29,6 +29,9 @@ Deno.serve(async (req) => {
       throw new Error("Insufficient permissions");
     }
 
+    // Get caller's profile id for created_by
+    const { data: callerProfileId } = await userClient.rpc("get_profile_id", { _user_id: caller.id });
+
     const { email, password, firstName, lastName, role, phone, location } = await req.json();
 
     // SOUS_ADMIN can only create CLIENT
@@ -56,7 +59,7 @@ Deno.serve(async (req) => {
         last_name: lastName,
         phone_number: phone || null,
         location: location || null,
-        created_by: caller.id,
+        created_by: callerProfileId || null,
         email: email,
       })
       .eq("user_id", newUser.user!.id);
