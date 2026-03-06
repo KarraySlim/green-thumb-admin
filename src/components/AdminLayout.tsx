@@ -19,7 +19,7 @@ const navItems = [
   { titleKey: "nav.surfaces", url: "/admin/surfaces", icon: Grid3X3, roles: ["ADMIN", "SOUS_ADMIN"] },
   { titleKey: "nav.donneesDetaillees", url: "/admin/donnees-detaillees", icon: Database, roles: ["ADMIN", "SOUS_ADMIN"] },
   { titleKey: "nav.capteurs", url: "/admin/capteurs", icon: Cpu, roles: ["ADMIN", "SOUS_ADMIN"] },
-  { titleKey: "nav.users", url: "/admin/users", icon: Users, roles: ["ADMIN"] },
+  { titleKey: "nav.users", url: "/admin/users", icon: Users, roles: ["ADMIN", "SOUS_ADMIN"] },
   { titleKey: "nav.subscriptions", url: "/admin/subscriptions", icon: CreditCard, roles: ["ADMIN"] },
   { titleKey: "nav.rapportSol", url: "/admin/rapport-sol", icon: FlaskConical, roles: ["ADMIN", "SOUS_ADMIN"] },
 ];
