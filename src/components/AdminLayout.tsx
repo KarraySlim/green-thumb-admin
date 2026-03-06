@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Outlet, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { Droplets, Grid3X3, Users, Briefcase, LogOut, CreditCard, LayoutDashboard, Cpu, Database, FlaskConical } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
@@ -41,9 +42,16 @@ export default function AdminLayout() {
   const navigate = useNavigate();
   const { user, profile, loading, signOut } = useAuth();
   const { t } = useLanguage();
-  const userRole = profile?.user_role ?? "CLIENT";
+  const userRole = profile?.user_role;
   const titleKey = pageTitleKeys[location.pathname];
   const title = titleKey ? t(titleKey) : "Administration";
+  const isClientUser = userRole === "CLIENT";
+
+  useEffect(() => {
+    if (isClientUser) {
+      void signOut();
+    }
+  }, [isClientUser, signOut]);
 
   if (loading) {
     return (
@@ -54,10 +62,9 @@ export default function AdminLayout() {
   }
 
   if (!user) return <Navigate to="/auth/login" replace />;
+  if (!profile) return null;
 
-  // Block CLIENT role from admin
-  if (userRole === "CLIENT") {
-    signOut();
+  if (isClientUser) {
     return <Navigate to="/auth/login" replace />;
   }
 
