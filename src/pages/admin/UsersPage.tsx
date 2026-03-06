@@ -36,6 +36,7 @@ export default function UsersPage() {
   const [search, setSearch] = useState("");
   const qc = useQueryClient();
   const isAdmin = currentProfile?.user_role === "ADMIN";
+  const isSousAdmin = currentProfile?.user_role === "SOUS_ADMIN";
 
   const { data: authUsers = [] } = useQuery<AuthUser[]>({
     queryKey: ["auth-users"],
@@ -45,13 +46,13 @@ export default function UsersPage() {
 
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("user_id, user_role, first_name, last_name, phone_number, location");
+        .select("id, user_id, user_role, first_name, last_name, phone_number, location, created_by");
 
       const profileMap = new Map(
         (profiles ?? []).map((p: any) => [p.user_id, p])
       );
 
-      return (users ?? []).map((u: any) => {
+      let result = (users ?? []).map((u: any) => {
         const prof = profileMap.get(u.id);
         return {
           ...u,
@@ -60,9 +61,21 @@ export default function UsersPage() {
           user_role: prof?.user_role || "CLIENT",
           phone_number: prof?.phone_number || "",
           location: prof?.location || "",
+          created_by: prof?.created_by || null,
+          profile_id: prof?.id || null,
         };
       });
+
+      // SOUS_ADMIN: only see CLIENTs they created
+      if (isSousAdmin && currentProfile?.id) {
+        result = result.filter(
+          (u: any) => u.created_by === currentProfile.id || u.profile_id === currentProfile.id
+        );
+      }
+
+      return result;
     },
+    enabled: !!currentProfile,
   });
 
   const updateMut = useMutation({
