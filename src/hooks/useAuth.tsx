@@ -8,6 +8,8 @@ interface Profile {
   avatar_url: string | null;
   user_role: string;
   id: string;
+  company_name: string | null;
+  company_logo: string | null;
 }
 
 interface AuthContextType {
