@@ -22,6 +22,8 @@ export const getProfiles = async (): Promise<Profile[]> => {
     date_exp_abo: p.date_exp_abo ?? "",
     type_abo: p.type_abo ?? undefined,
     created_by: p.created_by ?? undefined,
+    company_name: p.company_name ?? undefined,
+    company_logo: p.company_logo ?? undefined,
   }));
 };
 
@@ -36,6 +38,8 @@ export const updateProfile = async (id: string, data: Partial<Profile>): Promise
   if (data.date_deb_abo !== undefined) dbData.date_deb_abo = data.date_deb_abo || null;
   if (data.date_exp_abo !== undefined) dbData.date_exp_abo = data.date_exp_abo || null;
   if (data.type_abo !== undefined) dbData.type_abo = data.type_abo || null;
+  if (data.company_name !== undefined) dbData.company_name = data.company_name || null;
+  if (data.company_logo !== undefined) dbData.company_logo = data.company_logo || null;
 
   const { data: result, error } = await supabase
     .from("profiles")
@@ -84,7 +88,7 @@ export const deleteTypePlante = async (id: string): Promise<void> => {
   if (error) throw error;
 };
 
-// ─── Surfaces ───────────────────────────────────────
+// ─── Surfaces (Parcelles) ───────────────────────────
 export const getSurfaces = async (): Promise<Surface[]> => {
   const { data, error } = await supabase.from("surfaces").select("*");
   if (error) throw error;
@@ -100,19 +104,22 @@ export const getSurfaces = async (): Promise<Surface[]> => {
     fkUser: s.fk_user,
     fkSol: s.fk_sol,
     fkClimat: s.fk_climat,
+    tailleHa: s.taille_ha != null ? Number(s.taille_ha) : undefined,
     userEmail: profileMap.get(s.fk_user) ?? "—",
     nbVanne: (vannes ?? []).filter((v: any) => v.fk_surface === s.id).length,
   }));
 };
 
-export const createSurface = async (d: { nomSurface: string; localisation: string; fkUser: string }): Promise<Surface> => {
-  const { data, error } = await supabase.from("surfaces").insert({
+export const createSurface = async (d: { nomSurface: string; localisation: string; fkUser: string; tailleHa?: number }): Promise<Surface> => {
+  const insertData: any = {
     nom_surface: d.nomSurface,
     localisation: d.localisation,
     fk_user: d.fkUser,
-  } as any).select().single();
+  };
+  if (d.tailleHa !== undefined) insertData.taille_ha = d.tailleHa;
+  const { data, error } = await supabase.from("surfaces").insert(insertData as any).select().single();
   if (error) throw error;
-  return { id: data.id, nomSurface: (data as any).nom_surface, localisation: (data as any).localisation, fkUser: (data as any).fk_user };
+  return { id: data.id, nomSurface: (data as any).nom_surface, localisation: (data as any).localisation, fkUser: (data as any).fk_user, tailleHa: (data as any).taille_ha != null ? Number((data as any).taille_ha) : undefined };
 };
 
 export const updateSurface = async (id: string, d: Partial<Surface>): Promise<Surface | null> => {
@@ -122,6 +129,7 @@ export const updateSurface = async (id: string, d: Partial<Surface>): Promise<Su
   if (d.typeSol !== undefined) dbData.type_sol = d.typeSol;
   if (d.fkSol !== undefined) dbData.fk_sol = d.fkSol;
   if (d.fkClimat !== undefined) dbData.fk_climat = d.fkClimat;
+  if (d.tailleHa !== undefined) dbData.taille_ha = d.tailleHa;
   const { data, error } = await supabase.from("surfaces").update(dbData as any).eq("id", id).select().single();
   if (error) throw error;
   return { id: data.id, nomSurface: (data as any).nom_surface, localisation: (data as any).localisation } as Surface;
