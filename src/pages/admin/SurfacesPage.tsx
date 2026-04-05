@@ -33,7 +33,7 @@ export default function SurfacesPage() {
 
   const createMut = useMutation({
     mutationFn: createSurface,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["surfaces"] }); setShowForm(false); setSelectedUser(""); setLocalisation(""); toast({ title: "Surface créée" }); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["surfaces"] }); setShowForm(false); setSelectedUser(""); setLocalisation(""); toast({ title: t("parcelle.new") + " ✓" }); },
   });
   const updateMut = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<Surface> }) => updateSurface(id, data),
@@ -41,31 +41,38 @@ export default function SurfacesPage() {
   });
   const deleteMut = useMutation({
     mutationFn: deleteSurface,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["surfaces"] }); toast({ title: "Surface supprimée" }); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["surfaces"] }); toast({ title: t("common.delete") + " ✓" }); },
   });
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    createMut.mutate({ nomSurface: fd.get("nomSurface") as string, localisation, fkUser: selectedUser });
+    const tailleStr = fd.get("tailleHa") as string;
+    createMut.mutate({
+      nomSurface: fd.get("nomSurface") as string,
+      localisation,
+      fkUser: selectedUser,
+      tailleHa: tailleStr ? parseFloat(tailleStr) : undefined,
+    });
   };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-foreground">Surfaces</h2>
+        <h2 className="text-2xl font-bold text-foreground">{t("parcelle.title")}</h2>
         <Button onClick={() => setShowForm(!showForm)}>
-          {showForm ? <><X className="mr-2 h-4 w-4" />{t("common.cancel")}</> : <><Plus className="mr-2 h-4 w-4" />Nouvelle surface</>}
+          {showForm ? <><X className="mr-2 h-4 w-4" />{t("common.cancel")}</> : <><Plus className="mr-2 h-4 w-4" />{t("parcelle.new")}</>}
         </Button>
       </div>
 
       {showForm && (
         <Card>
-          <CardHeader><CardTitle>Nouvelle surface</CardTitle></CardHeader>
+          <CardHeader><CardTitle>{t("parcelle.new")}</CardTitle></CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div><Label>Nom surface</Label><Input name="nomSurface" required /></div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div><Label>{t("wizard.surfaceName")}</Label><Input name="nomSurface" required /></div>
+                <div><Label>{t("parcelle.taille")}</Label><Input name="tailleHa" type="number" step="0.01" min="0" /></div>
                 <div>
                   <Label>{t("wizard.user")}</Label>
                   <Select value={selectedUser} onValueChange={setSelectedUser}>
@@ -86,16 +93,23 @@ export default function SurfacesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nom</TableHead><TableHead>{t("surface.location")}</TableHead><TableHead>Nb vannes</TableHead>
-                <TableHead>{t("wizard.user")}</TableHead><TableHead>Type sol</TableHead>
+                <TableHead>Nom</TableHead>
+                <TableHead>{t("surface.location")}</TableHead>
+                <TableHead>{t("parcelle.taille")}</TableHead>
+                <TableHead>Nb vannes</TableHead>
+                <TableHead>{t("wizard.user")}</TableHead>
+                <TableHead>Type sol</TableHead>
                 <TableHead className="w-24">{t("common.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {items.map((s) => (
                 <TableRow key={s.id}>
-                  <TableCell>{s.nomSurface}</TableCell><TableCell>{s.localisation}</TableCell>
-                  <TableCell>{s.nbVanne}</TableCell><TableCell>{s.userEmail}</TableCell>
+                  <TableCell>{s.nomSurface}</TableCell>
+                  <TableCell>{s.localisation}</TableCell>
+                  <TableCell>{s.tailleHa != null ? `${s.tailleHa} ha` : "—"}</TableCell>
+                  <TableCell>{s.nbVanne}</TableCell>
+                  <TableCell>{s.userEmail}</TableCell>
                   <TableCell>{s.typeSol ?? "—"}</TableCell>
                   <TableCell>
                     <div className="flex gap-1">
@@ -105,7 +119,7 @@ export default function SurfacesPage() {
                   </TableCell>
                 </TableRow>
               ))}
-              {items.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">Aucune surface</TableCell></TableRow>}
+              {items.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">{t("parcelle.none")}</TableCell></TableRow>}
             </TableBody>
           </Table>
         </CardContent>
@@ -114,8 +128,9 @@ export default function SurfacesPage() {
       <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>{t("surface.editSurface")}</DialogTitle></DialogHeader>
-          <form onSubmit={(e) => { e.preventDefault(); if (!editing) return; const fd = new FormData(e.currentTarget); updateMut.mutate({ id: editing.id, data: { nomSurface: fd.get("nomSurface") as string, localisation: editLoc } }); }} className="space-y-4">
+          <form onSubmit={(e) => { e.preventDefault(); if (!editing) return; const fd = new FormData(e.currentTarget); const th = fd.get("tailleHa") as string; updateMut.mutate({ id: editing.id, data: { nomSurface: fd.get("nomSurface") as string, localisation: editLoc, tailleHa: th ? parseFloat(th) : undefined } }); }} className="space-y-4">
             <div><Label>Nom</Label><Input name="nomSurface" defaultValue={editing?.nomSurface} required /></div>
+            <div><Label>{t("parcelle.taille")}</Label><Input name="tailleHa" type="number" step="0.01" min="0" defaultValue={editing?.tailleHa ?? ""} /></div>
             <LocationSelector value={editLoc} onChange={setEditLoc} />
             <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setEditing(null)}>{t("common.cancel")}</Button><Button type="submit">{t("common.save")}</Button></div>
           </form>

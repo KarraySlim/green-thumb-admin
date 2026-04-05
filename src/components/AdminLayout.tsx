@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Outlet, Navigate, useLocation, useNavigate } from "react-router-dom";
-import { Droplets, Grid3X3, Users, Briefcase, LogOut, CreditCard, LayoutDashboard, Cpu, Database, FlaskConical } from "lucide-react";
+import { Droplets, Grid3X3, Users, Briefcase, LogOut, CreditCard, LayoutDashboard, Cpu, Database, FileBarChart } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -22,7 +22,7 @@ const navItems = [
   { titleKey: "nav.capteurs", url: "/admin/capteurs", icon: Cpu, roles: ["ADMIN", "SOUS_ADMIN"] },
   { titleKey: "nav.users", url: "/admin/users", icon: Users, roles: ["ADMIN", "SOUS_ADMIN"] },
   { titleKey: "nav.subscriptions", url: "/admin/subscriptions", icon: CreditCard, roles: ["ADMIN"] },
-  { titleKey: "nav.rapportSol", url: "/admin/rapport-sol", icon: FlaskConical, roles: ["ADMIN", "SOUS_ADMIN"] },
+  { titleKey: "nav.rapports", url: "/admin/rapports", icon: FileBarChart, roles: ["ADMIN", "SOUS_ADMIN"] },
 ];
 
 const pageTitleKeys: Record<string, string> = {
@@ -33,7 +33,9 @@ const pageTitleKeys: Record<string, string> = {
   "/admin/capteurs": "nav.capteurs",
   "/admin/users": "nav.users",
   "/admin/subscriptions": "nav.subscriptions",
+  "/admin/rapports": "nav.rapports",
   "/admin/rapport-sol": "nav.rapportSol",
+  "/admin/rapport-eau": "rapports.waterReport",
   "/admin/profile": "nav.profile",
 };
 
@@ -46,6 +48,12 @@ export default function AdminLayout() {
   const titleKey = pageTitleKeys[location.pathname];
   const title = titleKey ? t(titleKey) : "Administration";
   const isClientUser = userRole === "CLIENT";
+
+  // Dynamic branding for SOUS_ADMIN
+  const isSousAdmin = userRole === "SOUS_ADMIN";
+  const brandName = isSousAdmin && profile?.company_name ? profile.company_name : "TESLA";
+  const brandSub = isSousAdmin && profile?.company_name ? "" : "ENERGIE";
+  const brandLogo = isSousAdmin && profile?.company_logo ? profile.company_logo : logoTesla;
 
   useEffect(() => {
     if (isClientUser) {
@@ -86,10 +94,10 @@ export default function AdminLayout() {
         <Sidebar>
           <SidebarHeader className="p-4 border-b border-sidebar-border">
             <div className="flex items-center gap-2 mb-4">
-              <img src={logoTesla} alt="Tesla Energie" className="h-10 w-10 object-contain" />
+              <img src={brandLogo} alt={brandName} className="h-10 w-10 object-contain" />
               <div className="flex flex-col leading-tight">
-                <span className="text-sm font-bold text-sidebar-foreground tracking-wide">TESLA</span>
-                <span className="text-[10px] font-semibold tracking-[0.25em] text-primary">ENERGIE</span>
+                <span className="text-sm font-bold text-sidebar-foreground tracking-wide">{brandName}</span>
+                {brandSub && <span className="text-[10px] font-semibold tracking-[0.25em] text-primary">{brandSub}</span>}
               </div>
             </div>
             <div

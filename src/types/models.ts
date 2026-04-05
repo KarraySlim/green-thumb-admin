@@ -15,6 +15,8 @@ export interface Profile {
   date_exp_abo?: string;
   type_abo?: "op1" | "op1_op2" | "full";
   created_by?: string;
+  company_name?: string;
+  company_logo?: string;
 }
 
 export interface TypePlante {
@@ -50,6 +52,7 @@ export interface Surface {
   fkUser?: string;
   fkSol?: string;
   fkClimat?: string;
+  tailleHa?: number;
   // joined
   userEmail?: string;
   nbVanne?: number;
@@ -74,4 +77,22 @@ export interface Vanne {
   fkSurface: string;
   // joined
   surfaceNom?: string;
+}
+
+export interface WaterReport {
+  id: string;
+  client_id: string;
+  report_type: string;
+  created_at: string;
+  ph: number | null;
+  cew: number | null;
+  residu_sec: number | null;
+  chlorures: number | null;
+  sulfates: number | null;
+  bicarbonates: number | null;
+  sodium: number | null;
+  calcium: number | null;
+  magnesium: number | null;
+  sar: number | null;
+  durete: number | null;
 }

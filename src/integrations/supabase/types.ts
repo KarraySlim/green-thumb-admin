@@ -87,6 +87,8 @@ export type Database = {
         Row: {
           avatar_url: string | null
           city: string | null
+          company_logo: string | null
+          company_name: string | null
           country: string | null
           created_at: string
           created_by: string | null
@@ -107,6 +109,8 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           city?: string | null
+          company_logo?: string | null
+          company_name?: string | null
           country?: string | null
           created_at?: string
           created_by?: string | null
@@ -127,6 +131,8 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           city?: string | null
+          company_logo?: string | null
+          company_name?: string | null
           country?: string | null
           created_at?: string
           created_by?: string | null
@@ -290,6 +296,7 @@ export type Database = {
           id: string
           localisation: string
           nom_surface: string
+          taille_ha: number | null
           type_sol: string | null
           updated_at: string
         }
@@ -301,6 +308,7 @@ export type Database = {
           id?: string
           localisation?: string
           nom_surface: string
+          taille_ha?: number | null
           type_sol?: string | null
           updated_at?: string
         }
@@ -312,6 +320,7 @@ export type Database = {
           id?: string
           localisation?: string
           nom_surface?: string
+          taille_ha?: number | null
           type_sol?: string | null
           updated_at?: string
         }
@@ -397,6 +406,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      water_reports: {
+        Row: {
+          bicarbonates: number | null
+          calcium: number | null
+          cew: number | null
+          chlorures: number | null
+          client_id: string
+          created_at: string
+          durete: number | null
+          id: string
+          magnesium: number | null
+          ph: number | null
+          report_type: string
+          residu_sec: number | null
+          sar: number | null
+          sodium: number | null
+          sulfates: number | null
+        }
+        Insert: {
+          bicarbonates?: number | null
+          calcium?: number | null
+          cew?: number | null
+          chlorures?: number | null
+          client_id: string
+          created_at?: string
+          durete?: number | null
+          id?: string
+          magnesium?: number | null
+          ph?: number | null
+          report_type?: string
+          residu_sec?: number | null
+          sar?: number | null
+          sodium?: number | null
+          sulfates?: number | null
+        }
+        Update: {
+          bicarbonates?: number | null
+          calcium?: number | null
+          cew?: number | null
+          chlorures?: number | null
+          client_id?: string
+          created_at?: string
+          durete?: number | null
+          id?: string
+          magnesium?: number | null
+          ph?: number | null
+          report_type?: string
+          residu_sec?: number | null
+          sar?: number | null
+          sodium?: number | null
+          sulfates?: number | null
+        }
+        Relationships: []
       }
     }
     Views: {

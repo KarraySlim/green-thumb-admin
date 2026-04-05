@@ -57,7 +57,6 @@ export default function TravailPage() {
   const { data: vannes = [] } = useQuery({ queryKey: ["vannes"], queryFn: getVannes });
   const { data: typesList = [] } = useQuery({ queryKey: ["types-plante"], queryFn: getTypesPlante });
   
-  // Filter profiles based on role
   const profiles = useFilteredProfiles(allProfiles.filter(p => p.user_role === "CLIENT"));
 
   const updateProfileMut = useMutation({
@@ -152,9 +151,10 @@ export default function TravailPage() {
                             <h4 className="font-semibold text-sm text-foreground cursor-pointer" onClick={() => navigate(`/admin/travail/surface/${surface.id}`)}>{surface.nomSurface}</h4>
                             <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setEditingSurface(surface)}><Pencil className="h-3 w-3 text-muted-foreground" /></Button>
                           </div>
-                          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs text-muted-foreground mb-2">
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-muted-foreground mb-2">
                             <div className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {surface.localisation}</div>
-                            <div className="flex items-center gap-1"><Leaf className="h-3 w-3" /> {surface.nbVanne} {t("common.plants")}</div>
+                            <div className="flex items-center gap-1"><Leaf className="h-3 w-3" /> {surface.nbVanne} vannes</div>
+                            {surface.tailleHa != null && <div className="flex items-center gap-1">📐 {surface.tailleHa} ha</div>}
                           </div>
                           {surfaceVannes.length > 0 && (
                             <div className="flex flex-wrap gap-1.5 mt-2">
@@ -227,6 +227,7 @@ function NewProjectDialog({ open, onClose, profiles, typesList, qc, t }: { open:
   const [nomSurface, setNomSurface] = useState("");
   const [localisation, setLocalisation] = useState("");
   const [fkUser, setFkUser] = useState("");
+  const [tailleHa, setTailleHa] = useState<number | undefined>(undefined);
   const [nbPlanteTotal, setNbPlanteTotal] = useState(0);
 
   const [nomPlante, setNomPlante] = useState("");
@@ -236,12 +237,12 @@ function NewProjectDialog({ open, onClose, profiles, typesList, qc, t }: { open:
   const [plantEntries, setPlantEntries] = useState<PlantEntry[]>([{ nomPlante: "", age: 0, fkTypePlante: "" }]);
 
   const [nbVanne, setNbVanne] = useState(1);
-  const [vannesData, setVannesData] = useState<VanneData[]>([{ nomVanne: "", nbPlantParVanne: 0, debitEauParVanne: 0 }]);
+  const [vannesData, setVannesData] = useState<VanneData[]>([{ nomVanne: "Vanne 1", nbPlantParVanne: 0, debitEauParVanne: 0 }]);
 
   const updateNbVanne = (n: number) => {
     setNbVanne(n);
     const arr = [...vannesData];
-    while (arr.length < n) arr.push({ nomVanne: "", nbPlantParVanne: 0, debitEauParVanne: 0 });
+    while (arr.length < n) arr.push({ nomVanne: `Vanne ${arr.length + 1}`, nbPlantParVanne: 0, debitEauParVanne: 0 });
     setVannesData(arr.slice(0, n));
   };
 
@@ -263,7 +264,7 @@ function NewProjectDialog({ open, onClose, profiles, typesList, qc, t }: { open:
   const handleSave = async () => {
     setSaving(true);
     try {
-      const surface = await createSurface({ nomSurface, localisation, fkUser });
+      const surface = await createSurface({ nomSurface, localisation, fkUser, tailleHa });
 
       if (samePlants) {
         await createPlante({ nomPlante, age: agePlante, fkTypePlante, fkSurface: surface.id });
@@ -281,8 +282,8 @@ function NewProjectDialog({ open, onClose, profiles, typesList, qc, t }: { open:
       qc.invalidateQueries({ queryKey: ["plantes"] });
       qc.invalidateQueries({ queryKey: ["vannes"] });
       toast({ title: t("wizard.success") });
-      setStep(0); setSamePlants(null); setNomSurface(""); setLocalisation(""); setFkUser(""); setNomPlante(""); setAgePlante(0); setFkTypePlante(""); setNbVanne(1); setNbPlanteTotal(0);
-      setVannesData([{ nomVanne: "", nbPlantParVanne: 0, debitEauParVanne: 0 }]);
+      setStep(0); setSamePlants(null); setNomSurface(""); setLocalisation(""); setFkUser(""); setNomPlante(""); setAgePlante(0); setFkTypePlante(""); setNbVanne(1); setNbPlanteTotal(0); setTailleHa(undefined);
+      setVannesData([{ nomVanne: "Vanne 1", nbPlantParVanne: 0, debitEauParVanne: 0 }]);
       setPlantEntries([{ nomPlante: "", age: 0, fkTypePlante: "" }]);
       onClose();
     } catch { toast({ title: "Erreur", variant: "destructive" }); } finally { setSaving(false); }
@@ -321,7 +322,8 @@ function NewProjectDialog({ open, onClose, profiles, typesList, qc, t }: { open:
         {step === 1 && (
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div><Label>Nom surface</Label><Input value={nomSurface} onChange={(e) => setNomSurface(e.target.value)} /></div>
+              <div><Label>{t("wizard.surfaceName")}</Label><Input value={nomSurface} onChange={(e) => setNomSurface(e.target.value)} /></div>
+              <div><Label>{t("parcelle.taille")}</Label><Input type="number" step="0.01" min="0" value={tailleHa ?? ""} onChange={(e) => setTailleHa(e.target.value ? parseFloat(e.target.value) : undefined)} /></div>
               <div>
                 <Label>{t("wizard.user")}</Label>
                 <Select value={fkUser} onValueChange={setFkUser}>
@@ -331,14 +333,14 @@ function NewProjectDialog({ open, onClose, profiles, typesList, qc, t }: { open:
               </div>
             </div>
             <LocationSelector value={localisation} onChange={setLocalisation} />
-            <div><Label>Nb vannes</Label><Input type="number" min="1" value={nbVanne} onChange={(e) => updateNbVanne(Math.max(1, parseInt(e.target.value) || 1))} /></div>
+            <div><Label>{t("wizard.nbVannes")}</Label><Input type="number" min="1" value={nbVanne} onChange={(e) => updateNbVanne(Math.max(1, parseInt(e.target.value) || 1))} /></div>
 
             {samePlants ? (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div><Label>Nom plante</Label><Input value={nomPlante} onChange={(e) => setNomPlante(e.target.value)} /></div>
-                <div><Label>Âge</Label><Input type="number" min="0" value={agePlante} onChange={(e) => setAgePlante(parseInt(e.target.value) || 0)} /></div>
+                <div><Label>{t("wizard.plantName")}</Label><Input value={nomPlante} onChange={(e) => setNomPlante(e.target.value)} /></div>
+                <div><Label>{t("wizard.plantAge")}</Label><Input type="number" min="0" value={agePlante} onChange={(e) => setAgePlante(parseInt(e.target.value) || 0)} /></div>
                 <div>
-                  <Label>Type</Label>
+                  <Label>{t("wizard.plantType")}</Label>
                   <Select value={fkTypePlante} onValueChange={setFkTypePlante}>
                     <SelectTrigger><SelectValue placeholder="Type" /></SelectTrigger>
                     <SelectContent>{typesList.map((tp: any) => <SelectItem key={tp.id} value={tp.id}>{tp.nomPlante}</SelectItem>)}</SelectContent>
@@ -349,10 +351,10 @@ function NewProjectDialog({ open, onClose, profiles, typesList, qc, t }: { open:
               <div className="space-y-3">
                 {plantEntries.map((pe, idx) => (
                   <div key={idx} className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end border p-3 rounded-lg">
-                    <div><Label>Nom</Label><Input value={pe.nomPlante} onChange={(e) => updatePlantEntry(idx, "nomPlante", e.target.value)} /></div>
-                    <div><Label>Âge</Label><Input type="number" min="0" value={pe.age} onChange={(e) => updatePlantEntry(idx, "age", parseInt(e.target.value) || 0)} /></div>
+                    <div><Label>{t("wizard.plantName")}</Label><Input value={pe.nomPlante} onChange={(e) => updatePlantEntry(idx, "nomPlante", e.target.value)} /></div>
+                    <div><Label>{t("wizard.plantAge")}</Label><Input type="number" min="0" value={pe.age} onChange={(e) => updatePlantEntry(idx, "age", parseInt(e.target.value) || 0)} /></div>
                     <div>
-                      <Label>Type</Label>
+                      <Label>{t("wizard.plantType")}</Label>
                       <Select value={pe.fkTypePlante} onValueChange={(v) => updatePlantEntry(idx, "fkTypePlante", v)}>
                         <SelectTrigger><SelectValue placeholder="Type" /></SelectTrigger>
                         <SelectContent>{typesList.map((tp: any) => <SelectItem key={tp.id} value={tp.id}>{tp.nomPlante}</SelectItem>)}</SelectContent>
@@ -361,7 +363,7 @@ function NewProjectDialog({ open, onClose, profiles, typesList, qc, t }: { open:
                     {plantEntries.length > 1 && <Button variant="ghost" size="sm" onClick={() => removePlantEntry(idx)}><Trash2 className="h-4 w-4" /></Button>}
                   </div>
                 ))}
-                <Button variant="outline" size="sm" onClick={addPlantEntry}><Plus className="mr-1 h-3 w-3" /> Ajouter plante</Button>
+                <Button variant="outline" size="sm" onClick={addPlantEntry}><Plus className="mr-1 h-3 w-3" /> {t("wizard.addPlant")}</Button>
               </div>
             )}
 
@@ -377,9 +379,9 @@ function NewProjectDialog({ open, onClose, profiles, typesList, qc, t }: { open:
               <div key={i} className="border rounded-lg p-4 space-y-3">
                 <h4 className="font-semibold">Vanne {i + 1}</h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div><Label>Nom</Label><Input value={v.nomVanne} onChange={(e) => { const arr = [...vannesData]; arr[i] = { ...arr[i], nomVanne: e.target.value }; setVannesData(arr); }} /></div>
-                  <div><Label>Nb plantes</Label><Input type="number" min="0" value={v.nbPlantParVanne} onChange={(e) => { const arr = [...vannesData]; arr[i] = { ...arr[i], nbPlantParVanne: parseInt(e.target.value) || 0 }; setVannesData(arr); }} /></div>
-                  <div><Label>Débit (L/h)</Label><Input type="number" step="0.1" min="0" value={v.debitEauParVanne} onChange={(e) => { const arr = [...vannesData]; arr[i] = { ...arr[i], debitEauParVanne: parseFloat(e.target.value) || 0 }; setVannesData(arr); }} /></div>
+                  <div><Label>{t("wizard.vanneName")}</Label><Input value={v.nomVanne} onChange={(e) => { const arr = [...vannesData]; arr[i] = { ...arr[i], nomVanne: e.target.value }; setVannesData(arr); }} /></div>
+                  <div><Label>{t("wizard.vanneNbPlant")}</Label><Input type="number" min="0" value={v.nbPlantParVanne} onChange={(e) => { const arr = [...vannesData]; arr[i] = { ...arr[i], nbPlantParVanne: parseInt(e.target.value) || 0 }; setVannesData(arr); }} /></div>
+                  <div><Label>{t("wizard.vanneDebit")}</Label><Input type="number" step="0.1" min="0" value={v.debitEauParVanne} onChange={(e) => { const arr = [...vannesData]; arr[i] = { ...arr[i], debitEauParVanne: parseFloat(e.target.value) || 0 }; setVannesData(arr); }} /></div>
                 </div>
               </div>
             ))}
