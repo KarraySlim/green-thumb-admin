@@ -16,6 +16,8 @@ import SubscriptionsPage from "@/pages/admin/SubscriptionsPage";
 import ProfilePage from "@/pages/admin/ProfilePage";
 import ClientDetailPage from "@/pages/admin/ClientDetailPage";
 import RapportSolPage from "@/pages/admin/RapportSolPage";
+import RapportEauPage from "@/pages/admin/RapportEauPage";
+import RapportsPage from "@/pages/admin/RapportsPage";
 import SurfaceDetailPage from "@/pages/admin/SurfaceDetailPage";
 import LoginPage from "@/pages/auth/LoginPage";
 import SignupPage from "@/pages/auth/SignupPage";
@@ -50,7 +52,9 @@ const App = () => (
                 <Route path="profile" element={<ProfilePage />} />
                 <Route path="travail/client/:clientId" element={<ClientDetailPage />} />
                 <Route path="travail/surface/:surfaceId" element={<SurfaceDetailPage />} />
+                <Route path="rapports" element={<RapportsPage />} />
                 <Route path="rapport-sol" element={<RapportSolPage />} />
+                <Route path="rapport-eau" element={<RapportEauPage />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
