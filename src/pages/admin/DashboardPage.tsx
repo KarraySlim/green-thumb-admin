@@ -1,23 +1,28 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getProfiles, getSurfaces } from "@/services/data-service";
+import { getProfiles, getSurfaces, getSols, getClimats, getVannes } from "@/services/data-service";
 import { useFilteredProfiles } from "@/hooks/useRoleFilter";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Grid3X3, AlertTriangle, CheckCircle, Bell, ShieldCheck } from "lucide-react";
+import { Users, Grid3X3, AlertTriangle, CheckCircle, Bell, ShieldCheck, Cpu, Droplets } from "lucide-react";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
 const COLORS = ["hsl(145,63%,32%)", "hsl(145,63%,50%)", "hsl(140,30%,70%)", "hsl(0,84%,60%)"];
+const COLORS2 = ["hsl(210,80%,55%)", "hsl(30,90%,55%)", "hsl(145,63%,40%)", "hsl(280,60%,55%)"];
 
 export default function DashboardPage() {
   const { t } = useLanguage();
   const { data: allProfiles = [] } = useQuery({ queryKey: ["profiles"], queryFn: getProfiles });
   const profiles = useFilteredProfiles(allProfiles.filter(p => p.user_role === "CLIENT"));
+  const allFiltered = useFilteredProfiles(allProfiles);
   const { data: allSurfaces = [] } = useQuery({ queryKey: ["surfaces"], queryFn: getSurfaces });
-  
-  const visibleIds = useMemo(() => new Set(profiles.map(p => p.id)), [profiles]);
+  const { data: sols = [] } = useQuery({ queryKey: ["sols"], queryFn: getSols });
+  const { data: climats = [] } = useQuery({ queryKey: ["climats"], queryFn: getClimats });
+  const { data: vannes = [] } = useQuery({ queryKey: ["vannes"], queryFn: getVannes });
+
+  const visibleIds = useMemo(() => new Set(allFiltered.map(p => p.id)), [allFiltered]);
   const surfaces = useMemo(() => allSurfaces.filter(s => !s.fkUser || visibleIds.has(s.fkUser)), [allSurfaces, visibleIds]);
   const { data: notifications = [] } = useQuery({
     queryKey: ["subscription_notifications"],
@@ -27,6 +32,7 @@ export default function DashboardPage() {
     },
   });
 
+  // Subscription data
   const subData = [
     { name: t("sub.op1"), value: profiles.filter(c => c.type_abo === "op1").length },
     { name: t("sub.op1_op2"), value: profiles.filter(c => c.type_abo === "op1_op2").length },
@@ -38,6 +44,26 @@ export default function DashboardPage() {
     name: `${c.first_name} ${c.last_name?.charAt(0) ?? ""}`,
     surfaces: surfaces.filter(s => s.fkUser === c.id).length,
   }));
+
+  // Role distribution
+  const roleData = [
+    { name: "Admin", value: allFiltered.filter(p => p.user_role === "ADMIN").length },
+    { name: "Sous-Admin", value: allFiltered.filter(p => p.user_role === "SOUS_ADMIN").length },
+    { name: "Client", value: allFiltered.filter(p => p.user_role === "CLIENT").length },
+  ].filter(d => d.value > 0);
+
+  // Capteur counts
+  const totalSols = sols.length;
+  const totalClimats = climats.length;
+  const linkedSolIds = new Set(surfaces.filter(s => s.fkSol).map(s => s.fkSol));
+  const linkedClimatIds = new Set(surfaces.filter(s => s.fkClimat).map(s => s.fkClimat));
+  const activeSols = sols.filter(s => linkedSolIds.has(s.id)).length;
+  const activeClimats = climats.filter(c => linkedClimatIds.has(c.id)).length;
+
+  const capteurData = [
+    { name: t("capteur.sol"), actif: activeSols, inactif: totalSols - activeSols },
+    { name: t("capteur.climat"), actif: activeClimats, inactif: totalClimats - activeClimats },
+  ];
 
   const now = Date.now();
   const expiringSoon = profiles.filter(c => {
@@ -55,9 +81,11 @@ export default function DashboardPage() {
   }).length;
 
   const stats = [
-    { label: t("dashboard.totalUsers"), value: profiles.length, icon: Users, color: "bg-blue-500/10 text-blue-600" },
+    { label: t("dashboard.totalUsers"), value: allFiltered.length, icon: Users, color: "bg-blue-500/10 text-blue-600" },
     { label: t("dashboard.totalSurfaces"), value: surfaces.length, icon: Grid3X3, color: "bg-emerald-500/10 text-emerald-600" },
     { label: t("dashboard.activeSubscriptions"), value: activeCount, icon: ShieldCheck, color: "bg-green-500/10 text-green-600" },
+    { label: "Capteurs", value: totalSols + totalClimats, icon: Cpu, color: "bg-orange-500/10 text-orange-600" },
+    { label: "Vannes", value: vannes.length, icon: Droplets, color: "bg-cyan-500/10 text-cyan-600" },
     { label: t("dashboard.notificationsSent"), value: notifications.length, icon: Bell, color: "bg-violet-500/10 text-violet-600" },
   ];
 
@@ -65,7 +93,7 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-foreground">{t("dashboard.title")}</h2>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {stats.map((s) => (
           <Card key={s.label} className="hover:shadow-md transition-shadow">
             <CardContent className="p-4 flex items-center gap-3">
@@ -114,6 +142,7 @@ export default function DashboardPage() {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Subscription distribution */}
         <Card>
           <CardHeader><CardTitle className="text-base">{t("dashboard.subscriptionDistribution")}</CardTitle></CardHeader>
           <CardContent>
@@ -123,16 +152,31 @@ export default function DashboardPage() {
                   <Pie data={subData} cx="50%" cy="50%" outerRadius={90} innerRadius={50} dataKey="value" label={({ name, value }) => `${name}: ${value}`} paddingAngle={3}>
                     {subData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                   </Pie>
-                  <Tooltip />
-                  <Legend />
+                  <Tooltip /><Legend />
                 </PieChart>
               </ResponsiveContainer>
-            ) : (
-              <p className="text-center text-muted-foreground py-12">—</p>
-            )}
+            ) : <p className="text-center text-muted-foreground py-12">—</p>}
           </CardContent>
         </Card>
 
+        {/* Users by role */}
+        <Card>
+          <CardHeader><CardTitle className="text-base">Répartition des utilisateurs</CardTitle></CardHeader>
+          <CardContent>
+            {roleData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={280}>
+                <PieChart>
+                  <Pie data={roleData} cx="50%" cy="50%" outerRadius={90} innerRadius={50} dataKey="value" label={({ name, value }) => `${name}: ${value}`} paddingAngle={3}>
+                    {roleData.map((_, i) => <Cell key={i} fill={COLORS2[i % COLORS2.length]} />)}
+                  </Pie>
+                  <Tooltip /><Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : <p className="text-center text-muted-foreground py-12">—</p>}
+          </CardContent>
+        </Card>
+
+        {/* Parcelles per user */}
         <Card>
           <CardHeader><CardTitle className="text-base">{t("dashboard.surfacesPerUser")}</CardTitle></CardHeader>
           <CardContent>
@@ -146,9 +190,25 @@ export default function DashboardPage() {
                   <Bar dataKey="surfaces" fill="hsl(145,63%,32%)" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
-            ) : (
-              <p className="text-center text-muted-foreground py-12">—</p>
-            )}
+            ) : <p className="text-center text-muted-foreground py-12">—</p>}
+          </CardContent>
+        </Card>
+
+        {/* Capteurs actifs/inactifs */}
+        <Card>
+          <CardHeader><CardTitle className="text-base">Capteurs actifs / inactifs</CardTitle></CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={capteurData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="name" fontSize={12} />
+                <YAxis allowDecimals={false} />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="actif" name="Actifs" fill="hsl(145,63%,40%)" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="inactif" name="Inactifs" fill="hsl(0,0%,75%)" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>
