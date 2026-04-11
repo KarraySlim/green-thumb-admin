@@ -37,6 +37,7 @@ const pageTitleKeys: Record<string, string> = {
   "/admin/rapports": "nav.rapports",
   "/admin/rapport-sol": "nav.rapportSol",
   "/admin/rapport-eau": "rapports.waterReport",
+  "/admin/base-donnees": "nav.baseDonnees",
   "/admin/profile": "nav.profile",
 };
 
