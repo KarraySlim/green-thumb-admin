@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Outlet, Navigate, useLocation, useNavigate } from "react-router-dom";
-import { Droplets, Grid3X3, Users, Briefcase, LogOut, CreditCard, LayoutDashboard, Cpu, Database, FileBarChart } from "lucide-react";
+import { Droplets, Grid3X3, Users, Briefcase, LogOut, CreditCard, LayoutDashboard, Cpu, Database, FileBarChart, HardDrive } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -23,6 +23,7 @@ const navItems = [
   { titleKey: "nav.users", url: "/admin/users", icon: Users, roles: ["ADMIN", "SOUS_ADMIN"] },
   { titleKey: "nav.subscriptions", url: "/admin/subscriptions", icon: CreditCard, roles: ["ADMIN"] },
   { titleKey: "nav.rapports", url: "/admin/rapports", icon: FileBarChart, roles: ["ADMIN", "SOUS_ADMIN"] },
+  { titleKey: "nav.baseDonnees", url: "/admin/base-donnees", icon: HardDrive, roles: ["ADMIN", "SOUS_ADMIN"] },
 ];
 
 const pageTitleKeys: Record<string, string> = {
@@ -36,6 +37,7 @@ const pageTitleKeys: Record<string, string> = {
   "/admin/rapports": "nav.rapports",
   "/admin/rapport-sol": "nav.rapportSol",
   "/admin/rapport-eau": "rapports.waterReport",
+  "/admin/base-donnees": "nav.baseDonnees",
   "/admin/profile": "nav.profile",
 };
 

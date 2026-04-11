@@ -131,10 +131,7 @@ export default function TravailPage() {
                   <div className="mt-1"><SubscriptionBadge profile={profile} t={t} /></div>
                 </div>
                 <div className="flex flex-col items-end gap-1">
-                  <div className="flex gap-1">
-                    <Button variant="outline" size="sm" onClick={() => setEditingProfile(profile)} className="text-muted-foreground"><Pencil className="h-3 w-3" /></Button>
-                    <Button variant="outline" size="sm" className="border-primary text-primary hover:bg-primary/10"><Wifi className="mr-1 h-3 w-3" /> {t("travail.connect")}</Button>
-                  </div>
+                  <Button variant="outline" size="sm" className="border-primary text-primary hover:bg-primary/10"><Wifi className="mr-1 h-3 w-3" /> {t("travail.connect")}</Button>
                   <div className="flex items-center gap-1"><WifiOff className="h-3 w-3 text-destructive" /><span className="text-xs text-destructive font-medium">{t("travail.disconnected")}</span></div>
                 </div>
               </CardHeader>
