@@ -20,6 +20,7 @@ import RapportEauPage from "@/pages/admin/RapportEauPage";
 import RapportsPage from "@/pages/admin/RapportsPage";
 import SurfaceDetailPage from "@/pages/admin/SurfaceDetailPage";
 import BaseDonneesPage from "@/pages/admin/BaseDonneesPage";
+import ReclamationsPage from "@/pages/admin/ReclamationsPage";
 import LoginPage from "@/pages/auth/LoginPage";
 import SignupPage from "@/pages/auth/SignupPage";
 import ForgotPasswordPage from "@/pages/auth/ForgotPasswordPage";
@@ -57,6 +58,7 @@ const App = () => (
                 <Route path="rapport-sol" element={<RapportSolPage />} />
                 <Route path="rapport-eau" element={<RapportEauPage />} />
                 <Route path="base-donnees" element={<BaseDonneesPage />} />
+                <Route path="reclamations" element={<ReclamationsPage />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>

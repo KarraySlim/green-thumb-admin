@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getProfiles, updateProfile } from "@/services/data-service";
+import { useFilteredProfiles } from "@/hooks/useRoleFilter";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,23 +9,20 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Pencil, CreditCard, Trash2 } from "lucide-react";
+import { Pencil, CreditCard, Trash2, AlertCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Profile } from "@/types/models";
-
-const aboTypes = [
-  { value: "op1", label: "Option 1" },
-  { value: "op1_op2", label: "Option 1 + 2" },
-  { value: "full", label: "Full Options" },
-] as const;
 
 export default function SubscriptionsPage() {
   const { t } = useLanguage();
   const qc = useQueryClient();
-  const { data: profiles = [] } = useQuery({ queryKey: ["profiles"], queryFn: getProfiles });
+  const { data: allProfiles = [] } = useQuery({ queryKey: ["profiles"], queryFn: getProfiles });
+  const profiles = useFilteredProfiles(allProfiles);
   const [editing, setEditing] = useState<Profile | null>(null);
+  const [optElectro, setOptElectro] = useState(false);
+  const [optSante, setOptSante] = useState(false);
 
   const updateMut = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<Profile> }) => updateProfile(id, data),
@@ -32,9 +30,28 @@ export default function SubscriptionsPage() {
   });
 
   const removeMut = useMutation({
-    mutationFn: (id: string) => updateProfile(id, { date_deb_abo: undefined, date_exp_abo: undefined, type_abo: undefined }),
+    mutationFn: (id: string) => updateProfile(id, {
+      date_deb_abo: undefined,
+      date_exp_abo: undefined,
+      type_abo: undefined,
+      abo_electrovanne: false,
+      abo_sante_plante: false,
+    }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["profiles"] }); toast({ title: t("sub.removed") }); },
   });
+
+  const openEdit = (p: Profile) => {
+    setOptElectro(!!p.abo_electrovanne);
+    setOptSante(!!p.abo_sante_plante);
+    setEditing(p);
+  };
+
+  // derive type_abo from selected options
+  const computeTypeAbo = (electro: boolean, sante: boolean): "op1" | "op1_op2" | "full" => {
+    if (electro && sante) return "full";
+    if (electro || sante) return "op1_op2";
+    return "op1";
+  };
 
   const handleSave = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -45,16 +62,28 @@ export default function SubscriptionsPage() {
       data: {
         date_deb_abo: fd.get("dateDebAbo") as string || undefined,
         date_exp_abo: fd.get("dateExpAbo") as string || undefined,
-        type_abo: (fd.get("typeAbo") as Profile["type_abo"]) || undefined,
+        abo_capteur_sol: true,
+        abo_electrovanne: optElectro,
+        abo_sante_plante: optSante,
+        type_abo: computeTypeAbo(optElectro, optSante),
       },
     });
   };
 
   const getStatus = (profile: Profile) => {
-    if (!profile.date_exp_abo) return { label: t("sub.noSub"), variant: "outline" as const };
+    if (!profile.date_exp_abo) return { label: t("sub.noSub"), variant: "outline" as const, className: "" };
     const diff = Math.ceil((new Date(profile.date_exp_abo).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-    if (diff <= 0) return { label: t("sub.expired"), variant: "destructive" as const };
-    return { label: `${diff} ${t("sub.daysLeft")}`, variant: "default" as const };
+    if (diff <= 0) return { label: t("sub.expired"), variant: "destructive" as const, className: "" };
+    if (diff <= 30) return { label: `${diff} ${t("sub.daysLeft")}`, variant: "outline" as const, className: "border-orange-400 bg-orange-50 text-orange-700 dark:bg-orange-950/30" };
+    return { label: `${diff} ${t("sub.daysLeft")}`, variant: "default" as const, className: "" };
+  };
+
+  const renderOptions = (p: Profile) => {
+    const opts: string[] = [];
+    if (p.abo_capteur_sol !== false) opts.push("CapteurSol");
+    if (p.abo_electrovanne) opts.push("ElectroVanne");
+    if (p.abo_sante_plante) opts.push("SantéPlante");
+    return opts.length ? opts.join(" + ") : "—";
   };
 
   return (
@@ -66,7 +95,7 @@ export default function SubscriptionsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>{t("users.title")}</TableHead>
-                <TableHead>{t("sub.type")}</TableHead>
+                <TableHead>Options activées</TableHead>
                 <TableHead>{t("sub.start")}</TableHead>
                 <TableHead>{t("sub.end")}</TableHead>
                 <TableHead>{t("common.status")}</TableHead>
@@ -79,14 +108,19 @@ export default function SubscriptionsPage() {
                 return (
                   <TableRow key={p.id}>
                     <TableCell className="font-medium">{p.first_name} {p.last_name}</TableCell>
-                    <TableCell>{p.type_abo ? t(`sub.${p.type_abo}`) : "—"}</TableCell>
+                    <TableCell className="text-sm">{renderOptions(p)}</TableCell>
                     <TableCell>{p.date_deb_abo ?? "—"}</TableCell>
                     <TableCell>{p.date_exp_abo ?? "—"}</TableCell>
-                    <TableCell><Badge variant={status.variant}>{status.label}</Badge></TableCell>
+                    <TableCell>
+                      <Badge variant={status.variant} className={status.className}>
+                        {status.className && <AlertCircle className="mr-1 h-3 w-3" />}
+                        {status.label}
+                      </Badge>
+                    </TableCell>
                     <TableCell>
                       <div className="flex gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => setEditing(p)}><Pencil className="h-3 w-3" /></Button>
-                        {p.type_abo && (
+                        <Button variant="ghost" size="sm" onClick={() => openEdit(p)}><Pencil className="h-3 w-3" /></Button>
+                        {(p.date_exp_abo || p.abo_electrovanne || p.abo_sante_plante) && (
                           <Button variant="ghost" size="sm" className="text-destructive" onClick={() => removeMut.mutate(p.id)}><Trash2 className="h-3 w-3" /></Button>
                         )}
                       </div>
@@ -103,14 +137,20 @@ export default function SubscriptionsPage() {
         <DialogContent>
           <DialogHeader><DialogTitle><CreditCard className="inline mr-2 h-5 w-5" />{editing?.first_name} {editing?.last_name}</DialogTitle></DialogHeader>
           <form onSubmit={handleSave} className="space-y-4">
-            <div>
-              <Label>{t("sub.type")}</Label>
-              <Select name="typeAbo" defaultValue={editing?.type_abo ?? ""}>
-                <SelectTrigger><SelectValue placeholder="Choisir" /></SelectTrigger>
-                <SelectContent>
-                  {aboTypes.map((a) => <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
+            <div className="space-y-3 p-4 rounded-lg border bg-muted/30">
+              <p className="text-sm font-medium text-foreground">Options d'abonnement</p>
+              <div className="flex items-center gap-2 opacity-90">
+                <Checkbox checked disabled />
+                <Label className="text-sm">CapteurSol <span className="text-xs text-muted-foreground">(toujours inclus)</span></Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox id="electro" checked={optElectro} onCheckedChange={(v) => setOptElectro(!!v)} />
+                <Label htmlFor="electro" className="text-sm cursor-pointer">ElectroVanne</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox id="sante" checked={optSante} onCheckedChange={(v) => setOptSante(!!v)} />
+                <Label htmlFor="sante" className="text-sm cursor-pointer">SantéPlante</Label>
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div><Label>{t("sub.start")}</Label><Input name="dateDebAbo" type="date" defaultValue={editing?.date_deb_abo ?? ""} /></div>

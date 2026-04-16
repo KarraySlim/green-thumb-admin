@@ -85,6 +85,9 @@ export type Database = {
       }
       profiles: {
         Row: {
+          abo_capteur_sol: boolean
+          abo_electrovanne: boolean
+          abo_sante_plante: boolean
           avatar_url: string | null
           city: string | null
           company_logo: string | null
@@ -107,6 +110,9 @@ export type Database = {
           user_role: string
         }
         Insert: {
+          abo_capteur_sol?: boolean
+          abo_electrovanne?: boolean
+          abo_sante_plante?: boolean
           avatar_url?: string | null
           city?: string | null
           company_logo?: string | null
@@ -129,6 +135,9 @@ export type Database = {
           user_role?: string
         }
         Update: {
+          abo_capteur_sol?: boolean
+          abo_electrovanne?: boolean
+          abo_sante_plante?: boolean
           avatar_url?: string | null
           city?: string | null
           company_logo?: string | null
@@ -149,6 +158,45 @@ export type Database = {
           updated_at?: string
           user_id?: string
           user_role?: string
+        }
+        Relationships: []
+      }
+      reclamations: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          profile_id: string | null
+          statut: string
+          sujet: string
+          traite_at: string | null
+          traite_by: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          profile_id?: string | null
+          statut?: string
+          sujet: string
+          traite_at?: string | null
+          traite_by?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          profile_id?: string | null
+          statut?: string
+          sujet?: string
+          traite_at?: string | null
+          traite_by?: string | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -294,6 +342,7 @@ export type Database = {
           fk_sol: string | null
           fk_user: string | null
           id: string
+          is_connected: boolean
           localisation: string
           nom_surface: string
           taille_ha: number | null
@@ -306,6 +355,7 @@ export type Database = {
           fk_sol?: string | null
           fk_user?: string | null
           id?: string
+          is_connected?: boolean
           localisation?: string
           nom_surface: string
           taille_ha?: number | null
@@ -318,6 +368,7 @@ export type Database = {
           fk_sol?: string | null
           fk_user?: string | null
           id?: string
+          is_connected?: boolean
           localisation?: string
           nom_surface?: string
           taille_ha?: number | null
