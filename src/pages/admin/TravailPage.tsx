@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getProfiles, getSurfaces, getVannes, getTypesPlante, updateProfile, updateSurface, createSurface, createPlante, createVanne } from "@/services/data-service";
+import { Switch } from "@/components/ui/switch";
 import { useFilteredProfiles } from "@/hooks/useRoleFilter";
 import { useAuth } from "@/hooks/useAuth";
 import LocationSelector from "@/components/LocationSelector";
@@ -122,6 +123,9 @@ export default function TravailPage() {
       <div className="space-y-6">
         {filteredProfiles.map((profile) => {
           const profileSurfaces = filterLocation !== "all" ? surfaces.filter((s) => s.fkUser === profile.id && s.localisation === filterLocation) : surfaces.filter((s) => s.fkUser === profile.id);
+          const connectedCount = profileSurfaces.filter(s => s.isConnected).length;
+          const totalCount = profileSurfaces.length;
+          const userConnected = totalCount > 0 && connectedCount > 0;
           return (
             <Card key={profile.id} className="border-border hover:shadow-md transition-shadow">
               <CardHeader className="flex flex-row items-start justify-between pb-3">
@@ -130,9 +134,18 @@ export default function TravailPage() {
                   <p className="text-sm text-muted-foreground">{profile.email}</p>
                   <div className="mt-1"><SubscriptionBadge profile={profile} t={t} /></div>
                 </div>
-                <div className="flex flex-col items-end gap-1">
-                  <Button variant="outline" size="sm" className="border-primary text-primary hover:bg-primary/10"><Wifi className="mr-1 h-3 w-3" /> {t("travail.connect")}</Button>
-                  <div className="flex items-center gap-1"><WifiOff className="h-3 w-3 text-destructive" /><span className="text-xs text-destructive font-medium">{t("travail.disconnected")}</span></div>
+                <div className="flex flex-col items-end gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => setEditingProfile(profile)}>
+                    <Pencil className="mr-1 h-3 w-3" /> {t("travail.edit")}
+                  </Button>
+                  {totalCount > 0 ? (
+                    <div className={`flex items-center gap-1.5 text-xs font-medium ${userConnected ? "text-emerald-600" : "text-muted-foreground"}`}>
+                      {userConnected ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
+                      {connectedCount}/{totalCount} parcelle(s) connectée(s)
+                    </div>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">Aucune parcelle</span>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
@@ -143,10 +156,25 @@ export default function TravailPage() {
                     {profileSurfaces.map((surface) => {
                       const surfaceVannes = vannes.filter((v) => v.fkSurface === surface.id);
                       return (
-                        <div key={surface.id} className="border rounded-lg p-3 bg-muted/30 hover:bg-muted/50 transition-colors">
-                          <div className="flex items-start justify-between mb-2">
-                            <h4 className="font-semibold text-sm text-foreground cursor-pointer" onClick={() => navigate(`/admin/travail/surface/${surface.id}`)}>{surface.nomSurface}</h4>
-                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setEditingSurface(surface)}><Pencil className="h-3 w-3 text-muted-foreground" /></Button>
+                        <div key={surface.id} className={`border rounded-lg p-3 transition-colors ${surface.isConnected ? "bg-emerald-50/40 border-emerald-200 dark:bg-emerald-950/10 dark:border-emerald-900/40" : "bg-muted/30 hover:bg-muted/50"}`}>
+                          <div className="flex items-start justify-between mb-2 gap-2">
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-sm text-foreground cursor-pointer hover:underline" onClick={() => navigate(`/admin/travail/surface/${surface.id}`)}>{surface.nomSurface}</h4>
+                              <div className="flex items-center gap-1.5 mt-1">
+                                <span className={`inline-block h-2 w-2 rounded-full ${surface.isConnected ? "bg-emerald-500" : "bg-muted-foreground/40"}`} />
+                                <span className={`text-xs font-medium ${surface.isConnected ? "text-emerald-600" : "text-muted-foreground"}`}>
+                                  {surface.isConnected ? "Connectée" : "Non connectée"}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Switch
+                                checked={!!surface.isConnected}
+                                onCheckedChange={(v) => updateSurfaceMut.mutate({ id: surface.id, data: { isConnected: v } })}
+                                title={surface.isConnected ? "Déconnecter" : "Connecter"}
+                              />
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setEditingSurface(surface)}><Pencil className="h-3 w-3 text-muted-foreground" /></Button>
+                            </div>
                           </div>
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-muted-foreground mb-2">
                             <div className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {surface.localisation}</div>
