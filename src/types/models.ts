@@ -17,6 +17,24 @@ export interface Profile {
   created_by?: string;
   company_name?: string;
   company_logo?: string;
+  abo_capteur_sol?: boolean;
+  abo_electrovanne?: boolean;
+  abo_sante_plante?: boolean;
+}
+
+export interface Reclamation {
+  id: string;
+  user_id: string;
+  profile_id?: string;
+  sujet: string;
+  message: string;
+  statut: "en_attente" | "traite";
+  traite_at?: string;
+  traite_by?: string;
+  created_at: string;
+  // joined
+  userName?: string;
+  userEmail?: string;
 }
 
 export interface TypePlante {
