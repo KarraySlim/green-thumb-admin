@@ -327,3 +327,51 @@ export const deleteClimat = async (id: string): Promise<void> => {
 // Legacy aliases for backward compatibility
 export const getClients = getProfiles;
 export const updateClient = updateProfile;
+
+// ─── Réclamations ───────────────────────────────────
+export const getReclamations = async (): Promise<Reclamation[]> => {
+  const { data, error } = await supabase.from("reclamations" as any).select("*").order("created_at", { ascending: false });
+  if (error) throw error;
+  const { data: profiles } = await supabase.from("profiles").select("id, user_id, first_name, last_name, email");
+  const profByUser = new Map((profiles ?? []).map((p: any) => [p.user_id, p]));
+  return ((data ?? []) as any[]).map((r: any) => {
+    const prof: any = profByUser.get(r.user_id);
+    return {
+      id: r.id,
+      user_id: r.user_id,
+      profile_id: r.profile_id,
+      sujet: r.sujet,
+      message: r.message,
+      statut: r.statut,
+      traite_at: r.traite_at,
+      traite_by: r.traite_by,
+      created_at: r.created_at,
+      userName: prof ? `${prof.first_name ?? ""} ${prof.last_name ?? ""}`.trim() : "—",
+      userEmail: prof?.email ?? "—",
+    };
+  });
+};
+
+export const createReclamation = async (d: { user_id: string; profile_id?: string; sujet: string; message: string }): Promise<Reclamation> => {
+  const { data, error } = await supabase.from("reclamations" as any).insert(d as any).select().single();
+  if (error) throw error;
+  return data as any;
+};
+
+export const updateReclamationStatus = async (id: string, statut: "en_attente" | "traite", traite_by?: string): Promise<void> => {
+  const payload: any = { statut };
+  if (statut === "traite") {
+    payload.traite_at = new Date().toISOString();
+    if (traite_by) payload.traite_by = traite_by;
+  } else {
+    payload.traite_at = null;
+    payload.traite_by = null;
+  }
+  const { error } = await supabase.from("reclamations" as any).update(payload).eq("id", id);
+  if (error) throw error;
+};
+
+export const deleteReclamation = async (id: string): Promise<void> => {
+  const { error } = await supabase.from("reclamations" as any).delete().eq("id", id);
+  if (error) throw error;
+};
