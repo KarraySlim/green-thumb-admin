@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { Profile, TypePlante, Surface, Plante, Vanne, Sol, Climat } from "@/types/models";
+import { Profile, TypePlante, Surface, Plante, Vanne, Sol, Climat, Reclamation } from "@/types/models";
 
 // ─── Profiles (replaces Clients) ────────────────────
 export const getProfiles = async (): Promise<Profile[]> => {
@@ -24,6 +24,9 @@ export const getProfiles = async (): Promise<Profile[]> => {
     created_by: p.created_by ?? undefined,
     company_name: p.company_name ?? undefined,
     company_logo: p.company_logo ?? undefined,
+    abo_capteur_sol: p.abo_capteur_sol ?? true,
+    abo_electrovanne: p.abo_electrovanne ?? false,
+    abo_sante_plante: p.abo_sante_plante ?? false,
   }));
 };
 
@@ -40,6 +43,9 @@ export const updateProfile = async (id: string, data: Partial<Profile>): Promise
   if (data.type_abo !== undefined) dbData.type_abo = data.type_abo || null;
   if (data.company_name !== undefined) dbData.company_name = data.company_name || null;
   if (data.company_logo !== undefined) dbData.company_logo = data.company_logo || null;
+  if (data.abo_capteur_sol !== undefined) dbData.abo_capteur_sol = data.abo_capteur_sol;
+  if (data.abo_electrovanne !== undefined) dbData.abo_electrovanne = data.abo_electrovanne;
+  if (data.abo_sante_plante !== undefined) dbData.abo_sante_plante = data.abo_sante_plante;
 
   const { data: result, error } = await supabase
     .from("profiles")
@@ -105,6 +111,7 @@ export const getSurfaces = async (): Promise<Surface[]> => {
     fkSol: s.fk_sol,
     fkClimat: s.fk_climat,
     tailleHa: s.taille_ha != null ? Number(s.taille_ha) : undefined,
+    isConnected: s.is_connected ?? false,
     userEmail: profileMap.get(s.fk_user) ?? "—",
     nbVanne: (vannes ?? []).filter((v: any) => v.fk_surface === s.id).length,
   }));
@@ -130,6 +137,7 @@ export const updateSurface = async (id: string, d: Partial<Surface>): Promise<Su
   if (d.fkSol !== undefined) dbData.fk_sol = d.fkSol;
   if (d.fkClimat !== undefined) dbData.fk_climat = d.fkClimat;
   if (d.tailleHa !== undefined) dbData.taille_ha = d.tailleHa;
+  if (d.isConnected !== undefined) dbData.is_connected = d.isConnected;
   const { data, error } = await supabase.from("surfaces").update(dbData as any).eq("id", id).select().single();
   if (error) throw error;
   return { id: data.id, nomSurface: (data as any).nom_surface, localisation: (data as any).localisation } as Surface;
