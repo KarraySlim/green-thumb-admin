@@ -1,97 +1,145 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { getProfiles, getSurfaces, getSols, getClimats, getVannes } from "@/services/data-service";
+import { getProfiles, getSurfaces, getVannes } from "@/services/data-service";
 import { useFilteredProfiles } from "@/hooks/useRoleFilter";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Grid3X3, AlertTriangle, CheckCircle, Bell, ShieldCheck, Cpu, Droplets } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Users, Grid3X3, AlertTriangle, ShieldCheck, Crown, Trophy, Star, Wifi, WifiOff, CalendarDays } from "lucide-react";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
 const COLORS = ["hsl(145,63%,32%)", "hsl(145,63%,50%)", "hsl(140,30%,70%)", "hsl(0,84%,60%)"];
 const COLORS2 = ["hsl(210,80%,55%)", "hsl(30,90%,55%)", "hsl(145,63%,40%)", "hsl(280,60%,55%)"];
 
+type Range = "day" | "week" | "month" | "year" | "all";
+
 export default function DashboardPage() {
   const { t } = useLanguage();
+  const [range, setRange] = useState<Range>("month");
+
   const { data: allProfiles = [] } = useQuery({ queryKey: ["profiles"], queryFn: getProfiles });
-  const profiles = useFilteredProfiles(allProfiles.filter(p => p.user_role === "CLIENT"));
   const allFiltered = useFilteredProfiles(allProfiles);
+  const profiles = allFiltered.filter(p => p.user_role === "CLIENT");
   const { data: allSurfaces = [] } = useQuery({ queryKey: ["surfaces"], queryFn: getSurfaces });
-  const { data: sols = [] } = useQuery({ queryKey: ["sols"], queryFn: getSols });
-  const { data: climats = [] } = useQuery({ queryKey: ["climats"], queryFn: getClimats });
   const { data: vannes = [] } = useQuery({ queryKey: ["vannes"], queryFn: getVannes });
 
   const visibleIds = useMemo(() => new Set(allFiltered.map(p => p.id)), [allFiltered]);
   const surfaces = useMemo(() => allSurfaces.filter(s => !s.fkUser || visibleIds.has(s.fkUser)), [allSurfaces, visibleIds]);
+
+  // Date filter cutoff
+  const cutoff = useMemo(() => {
+    const d = new Date();
+    if (range === "day") d.setDate(d.getDate() - 1);
+    else if (range === "week") d.setDate(d.getDate() - 7);
+    else if (range === "month") d.setMonth(d.getMonth() - 1);
+    else if (range === "year") d.setFullYear(d.getFullYear() - 1);
+    else return null;
+    return d.getTime();
+  }, [range]);
+
   const { data: notifications = [] } = useQuery({
     queryKey: ["subscription_notifications"],
     queryFn: async () => {
-      const { data } = await supabase.from("subscription_notifications").select("*").order("sent_at", { ascending: false }).limit(50);
+      const { data } = await supabase.from("subscription_notifications").select("*").order("sent_at", { ascending: false }).limit(200);
       return data ?? [];
     },
   });
 
-  // Subscription data
-  const subData = [
-    { name: t("sub.op1"), value: profiles.filter(c => c.type_abo === "op1").length },
-    { name: t("sub.op1_op2"), value: profiles.filter(c => c.type_abo === "op1_op2").length },
-    { name: t("sub.full"), value: profiles.filter(c => c.type_abo === "full").length },
-    { name: t("sub.noSub"), value: profiles.filter(c => !c.type_abo).length },
-  ].filter(d => d.value > 0);
-
-  const surfPerUser = profiles.map(c => ({
-    name: `${c.first_name} ${c.last_name?.charAt(0) ?? ""}`,
-    surfaces: surfaces.filter(s => s.fkUser === c.id).length,
-  }));
-
-  // Role distribution
-  const roleData = [
-    { name: "Admin", value: allFiltered.filter(p => p.user_role === "ADMIN").length },
-    { name: "Sous-Admin", value: allFiltered.filter(p => p.user_role === "SOUS_ADMIN").length },
-    { name: "Client", value: allFiltered.filter(p => p.user_role === "CLIENT").length },
-  ].filter(d => d.value > 0);
-
-  // Capteur counts
-  const totalSols = sols.length;
-  const totalClimats = climats.length;
-  const linkedSolIds = new Set(surfaces.filter(s => s.fkSol).map(s => s.fkSol));
-  const linkedClimatIds = new Set(surfaces.filter(s => s.fkClimat).map(s => s.fkClimat));
-  const activeSols = sols.filter(s => linkedSolIds.has(s.id)).length;
-  const activeClimats = climats.filter(c => linkedClimatIds.has(c.id)).length;
-
-  const capteurData = [
-    { name: t("capteur.sol"), actif: activeSols, inactif: totalSols - activeSols },
-    { name: t("capteur.climat"), actif: activeClimats, inactif: totalClimats - activeClimats },
-  ];
+  const filteredNotifs = notifications.filter((n: any) => !cutoff || new Date(n.sent_at).getTime() >= cutoff);
 
   const now = Date.now();
+  const subscribed = profiles.filter(c => c.date_exp_abo && new Date(c.date_exp_abo).getTime() > now);
+
+  // Best subscription formula = combination most chosen
+  const formulaCount: Record<string, number> = {};
+  subscribed.forEach(p => {
+    const opts = ["CapteurSol"];
+    if (p.abo_electrovanne) opts.push("ElectroVanne");
+    if (p.abo_sante_plante) opts.push("SantéPlante");
+    const key = opts.join(" + ");
+    formulaCount[key] = (formulaCount[key] ?? 0) + 1;
+  });
+  const bestFormula = Object.entries(formulaCount).sort((a, b) => b[1] - a[1])[0];
+
+  // Best user = most parcelles
+  const userParcelles = profiles.map(p => ({
+    profile: p,
+    count: surfaces.filter(s => s.fkUser === p.id).length,
+  })).sort((a, b) => b.count - a.count);
+  const bestUser = userParcelles[0];
+
+  // Sous-admins clients
+  const sousAdmins = allFiltered.filter(p => p.user_role === "SOUS_ADMIN");
+  const sousAdminClients = sousAdmins.map(sa => ({
+    name: `${sa.first_name} ${sa.last_name}`.trim() || sa.email || "—",
+    clients: allProfiles.filter(p => p.created_by === sa.id).length,
+  }));
+
+  // Connected parcelles count
+  const connectedSurfaces = surfaces.filter(s => s.isConnected).length;
+
+  // Subscription distribution
+  const subData = [
+    { name: "CapteurSol seul", value: subscribed.filter(p => !p.abo_electrovanne && !p.abo_sante_plante).length },
+    { name: "+ ElectroVanne", value: subscribed.filter(p => p.abo_electrovanne && !p.abo_sante_plante).length },
+    { name: "+ SantéPlante", value: subscribed.filter(p => !p.abo_electrovanne && p.abo_sante_plante).length },
+    { name: "Full Options", value: subscribed.filter(p => p.abo_electrovanne && p.abo_sante_plante).length },
+  ].filter(d => d.value > 0);
+
+  const surfPerUser = profiles.slice(0, 8).map(c => ({
+    name: `${c.first_name} ${c.last_name?.charAt(0) ?? ""}`,
+    surfaces: surfaces.filter(s => s.fkUser === c.id).length,
+  })).filter(d => d.surfaces > 0);
+
   const expiringSoon = profiles.filter(c => {
     if (!c.date_exp_abo) return false;
     const diff = Math.ceil((new Date(c.date_exp_abo).getTime() - now) / (1000 * 60 * 60 * 24));
     return diff > 0 && diff <= 30;
   });
-  const expired = profiles.filter(c => {
-    if (!c.date_exp_abo) return false;
-    return new Date(c.date_exp_abo).getTime() <= now;
-  });
-  const activeCount = profiles.filter(c => {
-    if (!c.date_exp_abo) return false;
-    return new Date(c.date_exp_abo).getTime() > now;
-  }).length;
 
   const stats = [
-    { label: t("dashboard.totalUsers"), value: allFiltered.length, icon: Users, color: "bg-blue-500/10 text-blue-600" },
-    { label: t("dashboard.totalSurfaces"), value: surfaces.length, icon: Grid3X3, color: "bg-emerald-500/10 text-emerald-600" },
-    { label: t("dashboard.activeSubscriptions"), value: activeCount, icon: ShieldCheck, color: "bg-green-500/10 text-green-600" },
-    { label: "Capteurs", value: totalSols + totalClimats, icon: Cpu, color: "bg-orange-500/10 text-orange-600" },
-    { label: "Vannes", value: vannes.length, icon: Droplets, color: "bg-cyan-500/10 text-cyan-600" },
-    { label: t("dashboard.notificationsSent"), value: notifications.length, icon: Bell, color: "bg-violet-500/10 text-violet-600" },
+    { label: "Total utilisateurs", value: allFiltered.length, icon: Users, color: "bg-blue-500/10 text-blue-600" },
+    { label: "Utilisateurs abonnés", value: subscribed.length, icon: ShieldCheck, color: "bg-emerald-500/10 text-emerald-600" },
+    { label: "Parcelles", value: surfaces.length, icon: Grid3X3, color: "bg-amber-500/10 text-amber-600" },
+    { label: "Parcelles connectées", value: connectedSurfaces, icon: Wifi, color: "bg-green-500/10 text-green-600" },
+    { label: "Sous-Admins", value: sousAdmins.length, icon: Crown, color: "bg-violet-500/10 text-violet-600" },
+    { label: "Notifications", value: filteredNotifs.length, icon: AlertTriangle, color: "bg-orange-500/10 text-orange-600" },
+  ];
+
+  const ranges: { v: Range; label: string }[] = [
+    { v: "day", label: "Jour" },
+    { v: "week", label: "Semaine" },
+    { v: "month", label: "Mois" },
+    { v: "year", label: "Année" },
+    { v: "all", label: "Tout" },
   ];
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-foreground">{t("dashboard.title")}</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">{t("dashboard.title")}</h2>
+          <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1">
+            <CalendarDays className="h-3.5 w-3.5" />
+            {new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+          </p>
+        </div>
+        <div className="flex gap-1 p-1 rounded-lg bg-muted">
+          {ranges.map(r => (
+            <Button
+              key={r.v}
+              size="sm"
+              variant={range === r.v ? "default" : "ghost"}
+              onClick={() => setRange(r.v)}
+              className="h-7 text-xs"
+            >
+              {r.label}
+            </Button>
+          ))}
+        </div>
+      </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {stats.map((s) => (
@@ -109,42 +157,39 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {(expiringSoon.length > 0 || expired.length > 0) && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="border-green-200 bg-green-50/50 dark:bg-green-950/20 dark:border-green-900">
-            <CardContent className="p-4 flex items-center gap-3">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              <div>
-                <p className="text-lg font-bold text-foreground">{activeCount}</p>
-                <p className="text-xs text-muted-foreground">{t("dashboard.activeSubscriptions")}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-amber-200 bg-amber-50/50 dark:bg-amber-950/20 dark:border-amber-900">
-            <CardContent className="p-4 flex items-center gap-3">
-              <AlertTriangle className="h-5 w-5 text-amber-600" />
-              <div>
-                <p className="text-lg font-bold text-foreground">{expiringSoon.length}</p>
-                <p className="text-xs text-muted-foreground">{t("dashboard.expiringSoon")}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-red-200 bg-red-50/50 dark:bg-red-950/20 dark:border-red-900">
-            <CardContent className="p-4 flex items-center gap-3">
-              <AlertTriangle className="h-5 w-5 text-red-600" />
-              <div>
-                <p className="text-lg font-bold text-foreground">{expired.length}</p>
-                <p className="text-xs text-muted-foreground">{t("dashboard.expiredSubs")}</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      {/* Highlights */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20">
+          <CardContent className="p-5 flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-amber-500/10 text-amber-600">
+              <Trophy className="h-6 w-6" />
+            </div>
+            <div className="flex-1">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium">Meilleure formule</p>
+              <p className="text-lg font-bold text-foreground">{bestFormula?.[0] ?? "—"}</p>
+              <p className="text-xs text-muted-foreground">{bestFormula?.[1] ?? 0} abonné(s)</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-emerald-200 bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-950/20 dark:to-green-950/20">
+          <CardContent className="p-5 flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-600">
+              <Star className="h-6 w-6" />
+            </div>
+            <div className="flex-1">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium">Meilleur utilisateur</p>
+              <p className="text-lg font-bold text-foreground">
+                {bestUser?.profile.first_name} {bestUser?.profile.last_name} {!bestUser?.count && "—"}
+              </p>
+              <p className="text-xs text-muted-foreground">{bestUser?.count ?? 0} parcelle(s)</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Subscription distribution */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
-          <CardHeader><CardTitle className="text-base">{t("dashboard.subscriptionDistribution")}</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">Répartition des abonnements</CardTitle></CardHeader>
           <CardContent>
             {subData.length > 0 ? (
               <ResponsiveContainer width="100%" height={280}>
@@ -155,30 +200,29 @@ export default function DashboardPage() {
                   <Tooltip /><Legend />
                 </PieChart>
               </ResponsiveContainer>
-            ) : <p className="text-center text-muted-foreground py-12">—</p>}
+            ) : <p className="text-center text-muted-foreground py-12">Aucun abonnement actif</p>}
           </CardContent>
         </Card>
 
-        {/* Users by role */}
         <Card>
-          <CardHeader><CardTitle className="text-base">Répartition des utilisateurs</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">Clients par Sous-Admin</CardTitle></CardHeader>
           <CardContent>
-            {roleData.length > 0 ? (
+            {sousAdminClients.length > 0 ? (
               <ResponsiveContainer width="100%" height={280}>
-                <PieChart>
-                  <Pie data={roleData} cx="50%" cy="50%" outerRadius={90} innerRadius={50} dataKey="value" label={({ name, value }) => `${name}: ${value}`} paddingAngle={3}>
-                    {roleData.map((_, i) => <Cell key={i} fill={COLORS2[i % COLORS2.length]} />)}
-                  </Pie>
-                  <Tooltip /><Legend />
-                </PieChart>
+                <BarChart data={sousAdminClients}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="name" fontSize={12} />
+                  <YAxis allowDecimals={false} />
+                  <Tooltip />
+                  <Bar dataKey="clients" fill="hsl(280,60%,55%)" radius={[6, 6, 0, 0]} />
+                </BarChart>
               </ResponsiveContainer>
-            ) : <p className="text-center text-muted-foreground py-12">—</p>}
+            ) : <p className="text-center text-muted-foreground py-12">Aucun sous-admin</p>}
           </CardContent>
         </Card>
 
-        {/* Parcelles per user */}
-        <Card>
-          <CardHeader><CardTitle className="text-base">{t("dashboard.surfacesPerUser")}</CardTitle></CardHeader>
+        <Card className="lg:col-span-2">
+          <CardHeader><CardTitle className="text-base">Parcelles par utilisateur (top 8)</CardTitle></CardHeader>
           <CardContent>
             {surfPerUser.length > 0 ? (
               <ResponsiveContainer width="100%" height={280}>
@@ -187,35 +231,17 @@ export default function DashboardPage() {
                   <XAxis dataKey="name" fontSize={12} />
                   <YAxis allowDecimals={false} />
                   <Tooltip />
-                  <Bar dataKey="surfaces" fill="hsl(145,63%,32%)" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="surfaces" name="Parcelles" fill="hsl(145,63%,32%)" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : <p className="text-center text-muted-foreground py-12">—</p>}
-          </CardContent>
-        </Card>
-
-        {/* Capteurs actifs/inactifs */}
-        <Card>
-          <CardHeader><CardTitle className="text-base">Capteurs actifs / inactifs</CardTitle></CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={capteurData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="name" fontSize={12} />
-                <YAxis allowDecimals={false} />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="actif" name="Actifs" fill="hsl(145,63%,40%)" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="inactif" name="Inactifs" fill="hsl(0,0%,75%)" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>
 
       {expiringSoon.length > 0 && (
         <Card>
-          <CardHeader><CardTitle className="text-base flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-amber-500" /> {t("dashboard.expiringClients")}</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-amber-500" /> Clients avec abonnement expirant bientôt</CardTitle></CardHeader>
           <CardContent>
             <div className="space-y-2">
               {expiringSoon.map(c => {
@@ -226,8 +252,8 @@ export default function DashboardPage() {
                       <p className="font-medium text-foreground">{c.first_name} {c.last_name}</p>
                       <p className="text-xs text-muted-foreground">{c.email}</p>
                     </div>
-                    <Badge variant={days <= 7 ? "destructive" : "outline"} className="text-xs">
-                      {days} {t("sub.daysLeft")}
+                    <Badge variant="outline" className="border-orange-400 bg-orange-50 text-orange-700 dark:bg-orange-950/30">
+                      {days} j restants
                     </Badge>
                   </div>
                 );
