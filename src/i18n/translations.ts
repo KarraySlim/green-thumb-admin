@@ -15,6 +15,8 @@ export const translations: Record<Lang, Record<string, string>> = {
     "nav.profile": "Profil",
     "nav.logout": "Déconnexion",
     "nav.navigation": "Navigation",
+    "nav.reclamations": "Réclamations",
+    "nav.baseDonnees": "Base de données",
     // Dashboard
     "dashboard.title": "Tableau de bord",
     "dashboard.totalUsers": "Utilisateurs",

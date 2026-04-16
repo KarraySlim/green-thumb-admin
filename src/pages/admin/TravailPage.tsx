@@ -207,18 +207,37 @@ export default function TravailPage() {
 
 function EditProfileDialog({ profile, onClose, onSave }: { profile: Profile | null; onClose: () => void; onSave: (id: string, data: Partial<Profile>) => void }) {
   const { t } = useLanguage();
+  const [loc, setLoc] = useState(profile?.location ?? "");
   return (
-    <Dialog open={!!profile} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent>
+    <Dialog open={!!profile} onOpenChange={(o) => { if (!o) onClose(); else if (profile) setLoc(profile.location ?? ""); }}>
+      <DialogContent className="max-w-lg">
         <DialogHeader><DialogTitle>{t("travail.edit")} - {profile?.first_name} {profile?.last_name}</DialogTitle></DialogHeader>
-        <form onSubmit={(e) => { e.preventDefault(); if (!profile) return; const fd = new FormData(e.currentTarget); onSave(profile.id, { first_name: fd.get("firstName") as string, last_name: fd.get("lastName") as string, email: fd.get("email") as string, phone_number: fd.get("phoneNumber") as string }); }} className="space-y-4">
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          if (!profile) return;
+          const fd = new FormData(e.currentTarget);
+          onSave(profile.id, {
+            first_name: fd.get("firstName") as string,
+            last_name: fd.get("lastName") as string,
+            email: fd.get("email") as string,
+            phone_number: fd.get("phoneNumber") as string,
+            location: loc,
+            city: fd.get("city") as string,
+            country: fd.get("country") as string,
+          });
+        }} className="space-y-4 max-h-[70vh] overflow-y-auto">
           <div className="grid grid-cols-2 gap-3">
             <div><Label>{t("auth.firstName")}</Label><Input name="firstName" defaultValue={profile?.first_name} /></div>
             <div><Label>{t("auth.lastName")}</Label><Input name="lastName" defaultValue={profile?.last_name} /></div>
           </div>
           <div><Label>{t("auth.email")}</Label><Input name="email" defaultValue={profile?.email} /></div>
           <div><Label>{t("auth.phone")}</Label><Input name="phoneNumber" defaultValue={profile?.phone_number} /></div>
-          <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={onClose}>{t("common.cancel")}</Button><Button type="submit">{t("common.save")}</Button></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><Label>Ville</Label><Input name="city" defaultValue={profile?.city} /></div>
+            <div><Label>Pays</Label><Input name="country" defaultValue={profile?.country} /></div>
+          </div>
+          <div><Label>{t("surface.location")}</Label><LocationPicker value={loc} onChange={setLoc} /></div>
+          <div className="flex justify-end gap-2 sticky bottom-0 bg-background pt-2"><Button type="button" variant="outline" onClick={onClose}>{t("common.cancel")}</Button><Button type="submit">{t("common.save")}</Button></div>
         </form>
       </DialogContent>
     </Dialog>
