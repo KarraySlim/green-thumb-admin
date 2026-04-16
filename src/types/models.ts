@@ -71,6 +71,7 @@ export interface Surface {
   fkSol?: string;
   fkClimat?: string;
   tailleHa?: number;
+  isConnected?: boolean;
   // joined
   userEmail?: string;
   nbVanne?: number;
