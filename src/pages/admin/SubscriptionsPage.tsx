@@ -11,8 +11,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Pencil, CreditCard, Trash2, AlertCircle } from "lucide-react";
+import { Pencil, CreditCard, Trash2, AlertCircle, Info } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
+
+const OPT_TOOLTIPS = {
+  capteur: "Capteur de sol pour mesurer humidité, salinité, pH et température en temps réel. Inclus dans toute formule.",
+  electro: "Électrovanne connectée pour contrôler l'irrigation à distance et automatiser l'arrosage par parcelle.",
+  sante: "Surveillance de la santé des plantes : détection précoce du stress hydrique et anomalies foliaires.",
+};
 import { Profile } from "@/types/models";
 
 export default function SubscriptionsPage() {
