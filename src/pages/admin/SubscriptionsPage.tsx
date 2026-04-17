@@ -148,15 +148,24 @@ export default function SubscriptionsPage() {
               <p className="text-sm font-medium text-foreground">Options d'abonnement</p>
               <div className="flex items-center gap-2 opacity-90">
                 <Checkbox checked disabled />
-                <Label className="text-sm">CapteurSol <span className="text-xs text-muted-foreground">(toujours inclus)</span></Label>
+                <Label className="text-sm flex items-center gap-1">
+                  CapteurSol <span className="text-xs text-muted-foreground">(toujours inclus)</span>
+                  <Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent className="max-w-xs">{OPT_TOOLTIPS.capteur}</TooltipContent></Tooltip>
+                </Label>
               </div>
               <div className="flex items-center gap-2">
                 <Checkbox id="electro" checked={optElectro} onCheckedChange={(v) => setOptElectro(!!v)} />
-                <Label htmlFor="electro" className="text-sm cursor-pointer">ElectroVanne</Label>
+                <Label htmlFor="electro" className="text-sm cursor-pointer flex items-center gap-1">
+                  ElectroVanne
+                  <Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent className="max-w-xs">{OPT_TOOLTIPS.electro}</TooltipContent></Tooltip>
+                </Label>
               </div>
               <div className="flex items-center gap-2">
                 <Checkbox id="sante" checked={optSante} onCheckedChange={(v) => setOptSante(!!v)} />
-                <Label htmlFor="sante" className="text-sm cursor-pointer">SantéPlante</Label>
+                <Label htmlFor="sante" className="text-sm cursor-pointer flex items-center gap-1">
+                  SantéPlante
+                  <Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent className="max-w-xs">{OPT_TOOLTIPS.sante}</TooltipContent></Tooltip>
+                </Label>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
