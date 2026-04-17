@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { DeleteDialog } from "@/components/DeleteDialog";
 import { toast } from "@/hooks/use-toast";
 import { Pencil, CheckCircle, Clock, Search, Plus } from "lucide-react";
@@ -34,6 +35,8 @@ export default function UsersPage() {
   const [editing, setEditing] = useState<AuthUser | null>(null);
   const [creating, setCreating] = useState(false);
   const [search, setSearch] = useState("");
+  const [createElectro, setCreateElectro] = useState(false);
+  const [createSante, setCreateSante] = useState(false);
   const qc = useQueryClient();
   const isAdmin = currentProfile?.user_role === "ADMIN";
   const isSousAdmin = currentProfile?.user_role === "SOUS_ADMIN";
@@ -126,11 +129,10 @@ export default function UsersPage() {
       role: string;
       phone: string;
       location: string;
+      aboElectrovanne: boolean;
+      aboSantePlante: boolean;
     }) => {
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await supabase.functions.invoke("create-user", {
-        body: payload,
-      });
+      const res = await supabase.functions.invoke("create-user", { body: payload });
       if (res.error) throw res.error;
       if (res.data?.error) throw new Error(res.data.error);
       return res.data;
@@ -138,6 +140,8 @@ export default function UsersPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["auth-users"] });
       setCreating(false);
+      setCreateElectro(false);
+      setCreateSante(false);
       toast({ title: "Utilisateur créé avec succès" });
     },
     onError: (err: any) => {
@@ -156,6 +160,8 @@ export default function UsersPage() {
       role: fd.get("role") as string,
       phone: fd.get("phone") as string,
       location: fd.get("location") as string,
+      aboElectrovanne: createElectro,
+      aboSantePlante: createSante,
     });
   };
 
@@ -351,6 +357,21 @@ export default function UsersPage() {
             <div>
               <Label>{t("surface.location")}</Label>
               <Input name="location" />
+            </div>
+            <div className="space-y-2 p-3 rounded-lg border bg-muted/30">
+              <p className="text-sm font-medium">Options d'abonnement</p>
+              <div className="flex items-center gap-2 opacity-80">
+                <Checkbox checked disabled />
+                <Label className="text-sm">CapteurSol <span className="text-xs text-muted-foreground">(toujours inclus)</span></Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox id="c-electro" checked={createElectro} onCheckedChange={(v) => setCreateElectro(!!v)} />
+                <Label htmlFor="c-electro" className="text-sm cursor-pointer">ElectroVanne</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox id="c-sante" checked={createSante} onCheckedChange={(v) => setCreateSante(!!v)} />
+                <Label htmlFor="c-sante" className="text-sm cursor-pointer">SantéPlante</Label>
+              </div>
             </div>
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setCreating(false)}>{t("common.cancel")}</Button>

@@ -11,8 +11,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Pencil, CreditCard, Trash2, AlertCircle } from "lucide-react";
+import { Pencil, CreditCard, Trash2, AlertCircle, Info } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
+
+const OPT_TOOLTIPS = {
+  capteur: "Capteur de sol pour mesurer humidité, salinité, pH et température en temps réel. Inclus dans toute formule.",
+  electro: "Électrovanne connectée pour contrôler l'irrigation à distance et automatiser l'arrosage par parcelle.",
+  sante: "Surveillance de la santé des plantes : détection précoce du stress hydrique et anomalies foliaires.",
+};
 import { Profile } from "@/types/models";
 
 export default function SubscriptionsPage() {
@@ -141,15 +148,24 @@ export default function SubscriptionsPage() {
               <p className="text-sm font-medium text-foreground">Options d'abonnement</p>
               <div className="flex items-center gap-2 opacity-90">
                 <Checkbox checked disabled />
-                <Label className="text-sm">CapteurSol <span className="text-xs text-muted-foreground">(toujours inclus)</span></Label>
+                <Label className="text-sm flex items-center gap-1">
+                  CapteurSol <span className="text-xs text-muted-foreground">(toujours inclus)</span>
+                  <Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent className="max-w-xs">{OPT_TOOLTIPS.capteur}</TooltipContent></Tooltip>
+                </Label>
               </div>
               <div className="flex items-center gap-2">
                 <Checkbox id="electro" checked={optElectro} onCheckedChange={(v) => setOptElectro(!!v)} />
-                <Label htmlFor="electro" className="text-sm cursor-pointer">ElectroVanne</Label>
+                <Label htmlFor="electro" className="text-sm cursor-pointer flex items-center gap-1">
+                  ElectroVanne
+                  <Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent className="max-w-xs">{OPT_TOOLTIPS.electro}</TooltipContent></Tooltip>
+                </Label>
               </div>
               <div className="flex items-center gap-2">
                 <Checkbox id="sante" checked={optSante} onCheckedChange={(v) => setOptSante(!!v)} />
-                <Label htmlFor="sante" className="text-sm cursor-pointer">SantéPlante</Label>
+                <Label htmlFor="sante" className="text-sm cursor-pointer flex items-center gap-1">
+                  SantéPlante
+                  <Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent className="max-w-xs">{OPT_TOOLTIPS.sante}</TooltipContent></Tooltip>
+                </Label>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
