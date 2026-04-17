@@ -35,6 +35,8 @@ export default function UsersPage() {
   const [editing, setEditing] = useState<AuthUser | null>(null);
   const [creating, setCreating] = useState(false);
   const [search, setSearch] = useState("");
+  const [createElectro, setCreateElectro] = useState(false);
+  const [createSante, setCreateSante] = useState(false);
   const qc = useQueryClient();
   const isAdmin = currentProfile?.user_role === "ADMIN";
   const isSousAdmin = currentProfile?.user_role === "SOUS_ADMIN";
