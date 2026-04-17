@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { DeleteDialog } from "@/components/DeleteDialog";
 import { toast } from "@/hooks/use-toast";
 import { Pencil, CheckCircle, Clock, Search, Plus } from "lucide-react";
