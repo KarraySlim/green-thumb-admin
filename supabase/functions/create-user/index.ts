@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
     // Get caller's profile id for created_by
     const { data: callerProfileId } = await userClient.rpc("get_profile_id", { _user_id: caller.id });
 
-    const { email, password, firstName, lastName, role, phone, location } = await req.json();
+    const { email, password, firstName, lastName, role, phone, location, aboElectrovanne, aboSantePlante } = await req.json();
 
     // SOUS_ADMIN can only create CLIENT
     if (callerRole === "SOUS_ADMIN" && role !== "CLIENT") {
@@ -50,6 +50,11 @@ Deno.serve(async (req) => {
     });
     if (createError) throw createError;
 
+    // Compute type_abo based on selected options
+    const electro = !!aboElectrovanne;
+    const sante = !!aboSantePlante;
+    const typeAbo = electro && sante ? "full" : (electro || sante ? "op1_op2" : "op1");
+
     // Update profile with role and created_by
     const { error: profileError } = await adminClient
       .from("profiles")
@@ -61,6 +66,10 @@ Deno.serve(async (req) => {
         location: location || null,
         created_by: callerProfileId || null,
         email: email,
+        abo_capteur_sol: true,
+        abo_electrovanne: electro,
+        abo_sante_plante: sante,
+        type_abo: typeAbo,
       })
       .eq("user_id", newUser.user!.id);
     if (profileError) throw profileError;
