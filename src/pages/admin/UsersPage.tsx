@@ -129,11 +129,10 @@ export default function UsersPage() {
       role: string;
       phone: string;
       location: string;
+      aboElectrovanne: boolean;
+      aboSantePlante: boolean;
     }) => {
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await supabase.functions.invoke("create-user", {
-        body: payload,
-      });
+      const res = await supabase.functions.invoke("create-user", { body: payload });
       if (res.error) throw res.error;
       if (res.data?.error) throw new Error(res.data.error);
       return res.data;
@@ -141,6 +140,8 @@ export default function UsersPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["auth-users"] });
       setCreating(false);
+      setCreateElectro(false);
+      setCreateSante(false);
       toast({ title: "Utilisateur créé avec succès" });
     },
     onError: (err: any) => {
@@ -159,6 +160,8 @@ export default function UsersPage() {
       role: fd.get("role") as string,
       phone: fd.get("phone") as string,
       location: fd.get("location") as string,
+      aboElectrovanne: createElectro,
+      aboSantePlante: createSante,
     });
   };
 
