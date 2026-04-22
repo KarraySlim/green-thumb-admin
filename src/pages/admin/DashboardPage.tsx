@@ -95,6 +95,33 @@ export default function DashboardPage() {
     surfaces: surfaces.filter(s => s.fkUser === c.id).length,
   })).filter(d => d.surfaces > 0);
 
+  // Time series: evolution of users / subscribers / parcelles over selected range
+  const timeSeries = useMemo(() => {
+    const buckets = range === "day" ? 12 : range === "week" ? 7 : range === "month" ? 15 : range === "year" ? 12 : 12;
+    const getCreated = (o: any) => new Date(o.created_at ?? o.createdAt ?? 0).getTime();
+    const allTimes = allFiltered.map(getCreated).filter(t => t > 0);
+    const start = cutoff ?? (allTimes.length ? Math.min(...allTimes) : Date.now() - 30 * 86400_000);
+    const end = Date.now();
+    const step = (end - start) / buckets;
+    const fmt = (d: Date) => {
+      if (range === "day") return d.getHours() + "h";
+      if (range === "year" || range === "all") return d.toLocaleDateString("fr-FR", { month: "short", year: "2-digit" });
+      return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "short" });
+    };
+    return Array.from({ length: buckets }, (_, i) => {
+      const t = start + step * (i + 1);
+      const users = allFiltered.filter(p => getCreated(p) <= t && getCreated(p) > 0).length;
+      const subs = profiles.filter(p => {
+        if (!p.date_deb_abo) return false;
+        const deb = new Date(p.date_deb_abo).getTime();
+        const exp = p.date_exp_abo ? new Date(p.date_exp_abo).getTime() : Infinity;
+        return deb <= t && exp >= t;
+      }).length;
+      const parc = surfaces.filter(s => getCreated(s) <= t && getCreated(s) > 0).length;
+      return { name: fmt(new Date(t)), Utilisateurs: users, Abonnés: subs, Parcelles: parc };
+    });
+  }, [range, cutoff, allFiltered, profiles, surfaces]);
+
   const expiringSoon = profiles.filter(c => {
     if (!c.date_exp_abo) return false;
     const diff = Math.ceil((new Date(c.date_exp_abo).getTime() - now) / (1000 * 60 * 60 * 24));
