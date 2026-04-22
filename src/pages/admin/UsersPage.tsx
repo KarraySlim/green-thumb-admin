@@ -218,6 +218,7 @@ export default function UsersPage() {
                 <TableHead>{t("auth.email")}</TableHead>
                 <TableHead>{t("auth.firstName")}</TableHead>
                 <TableHead>{t("auth.lastName")}</TableHead>
+                <TableHead>{t("auth.phone")}</TableHead>
                 <TableHead>Rôle</TableHead>
                 <TableHead>Email vérifié</TableHead>
                 <TableHead>Inscrit le</TableHead>
@@ -230,6 +231,7 @@ export default function UsersPage() {
                   <TableCell className="font-medium">{u.email}</TableCell>
                   <TableCell>{u.first_name || "—"}</TableCell>
                   <TableCell>{u.last_name || "—"}</TableCell>
+                  <TableCell className="text-sm">{u.phone_number || "—"}</TableCell>
                   <TableCell>{getRoleBadge(u.user_role ?? "CLIENT")}</TableCell>
                   <TableCell>
                     {u.email_confirmed_at ? (
@@ -259,7 +261,7 @@ export default function UsersPage() {
               ))}
               {filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground">{t("users.noUser")}</TableCell>
+                  <TableCell colSpan={8} className="text-center text-muted-foreground">{t("users.noUser")}</TableCell>
                 </TableRow>
               )}
             </TableBody>
