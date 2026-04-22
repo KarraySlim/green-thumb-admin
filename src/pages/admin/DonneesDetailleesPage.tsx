@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getTypesPlante, createTypePlante, updateTypePlante, deleteTypePlante,
   getPlantes, createPlante, updatePlante, deletePlante,
   getVannes, createVanne, updateVanne, deleteVanne,
-  getSurfaces,
+  getSurfaces, getProfiles,
 } from "@/services/data-service";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -28,6 +28,16 @@ export default function DonneesDetailleesPage() {
   const { data: plantes = [] } = useQuery({ queryKey: ["plantes"], queryFn: getPlantes });
   const { data: vannes = [] } = useQuery({ queryKey: ["vannes"], queryFn: getVannes });
   const { data: surfaces = [] } = useQuery({ queryKey: ["surfaces"], queryFn: getSurfaces });
+  const { data: profiles = [] } = useQuery({ queryKey: ["profiles"], queryFn: getProfiles });
+
+  const userBySurfaceId = useMemo(() => {
+    const m = new Map<string, string>();
+    surfaces.forEach(s => {
+      const u = profiles.find(p => p.id === s.fkUser);
+      if (u) m.set(s.id, `${u.first_name ?? ""} ${u.last_name ?? ""}`.trim() || u.email || "—");
+    });
+    return m;
+  }, [surfaces, profiles]);
 
   // Types CRUD
   const [showTypeForm, setShowTypeForm] = useState(false);
@@ -125,11 +135,12 @@ export default function DonneesDetailleesPage() {
           )}
           <Card><CardContent className="p-0">
             <Table>
-              <TableHeader><TableRow><TableHead>Nom</TableHead><TableHead>Âge</TableHead><TableHead>Surface</TableHead><TableHead>Type</TableHead><TableHead className="w-24">{t("common.actions")}</TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>Nom</TableHead><TableHead>Âge</TableHead><TableHead>👤 Utilisateur</TableHead><TableHead>🌱 Parcelle</TableHead><TableHead>Type</TableHead><TableHead className="w-24">{t("common.actions")}</TableHead></TableRow></TableHeader>
               <TableBody>
                 {plantes.map(p => (
                   <TableRow key={p.id}>
                     <TableCell>{p.nomPlante}</TableCell><TableCell>{p.age} ans</TableCell>
+                    <TableCell className="text-sm">{userBySurfaceId.get(p.fkSurface) ?? "—"}</TableCell>
                     <TableCell>{p.surfaceNom}</TableCell><TableCell>{p.typePlanteNom}</TableCell>
                     <TableCell>
                       <div className="flex gap-1">
@@ -139,7 +150,7 @@ export default function DonneesDetailleesPage() {
                     </TableCell>
                   </TableRow>
                 ))}
-                {plantes.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">{t("donnees.noPlante")}</TableCell></TableRow>}
+                {plantes.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">{t("donnees.noPlante")}</TableCell></TableRow>}
               </TableBody>
             </Table>
           </CardContent></Card>
@@ -167,12 +178,14 @@ export default function DonneesDetailleesPage() {
           )}
           <Card><CardContent className="p-0">
             <Table>
-              <TableHeader><TableRow><TableHead>Nom</TableHead><TableHead>Débit (L/h)</TableHead><TableHead>Nb plantes</TableHead><TableHead>Surface</TableHead><TableHead className="w-24">{t("common.actions")}</TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>Nom</TableHead><TableHead>Débit (L/h)</TableHead><TableHead>Nb plantes</TableHead><TableHead>👤 Utilisateur</TableHead><TableHead>🌱 Parcelle</TableHead><TableHead className="w-24">{t("common.actions")}</TableHead></TableRow></TableHeader>
               <TableBody>
                 {vannes.map(v => (
                   <TableRow key={v.id}>
                     <TableCell>{v.nomVanne}</TableCell><TableCell>{v.debitEauParVanne}</TableCell>
-                    <TableCell>{v.nbPlantParVanne}</TableCell><TableCell>{v.surfaceNom}</TableCell>
+                    <TableCell>{v.nbPlantParVanne}</TableCell>
+                    <TableCell className="text-sm">{userBySurfaceId.get(v.fkSurface) ?? "—"}</TableCell>
+                    <TableCell>{v.surfaceNom}</TableCell>
                     <TableCell>
                       <div className="flex gap-1">
                         <Button variant="ghost" size="sm" onClick={() => setEditVanne(v)}><Pencil className="h-3 w-3" /></Button>
@@ -181,7 +194,7 @@ export default function DonneesDetailleesPage() {
                     </TableCell>
                   </TableRow>
                 ))}
-                {vannes.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">{t("donnees.noVanne")}</TableCell></TableRow>}
+                {vannes.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">{t("donnees.noVanne")}</TableCell></TableRow>}
               </TableBody>
             </Table>
           </CardContent></Card>

@@ -1,6 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getProfiles, getSurfaces, getVannes, getTypesPlante, updateProfile, updateSurface, createSurface, createPlante, createVanne } from "@/services/data-service";
+import { supabase } from "@/integrations/supabase/client";
 import { Switch } from "@/components/ui/switch";
 import { useFilteredProfiles } from "@/hooks/useRoleFilter";
 import { useAuth } from "@/hooks/useAuth";
@@ -52,6 +53,16 @@ export default function TravailPage() {
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
   const [editingSurface, setEditingSurface] = useState<Surface | null>(null);
   const [showWizard, setShowWizard] = useState(false);
+
+  // Realtime sync for travail page
+  useEffect(() => {
+    const ch = supabase
+      .channel("travail-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "surfaces" }, () => qc.invalidateQueries({ queryKey: ["surfaces"] }))
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => qc.invalidateQueries({ queryKey: ["profiles"] }))
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [qc]);
 
   const { data: allProfiles = [] } = useQuery({ queryKey: ["profiles"], queryFn: getProfiles });
   const { data: surfaces = [] } = useQuery({ queryKey: ["surfaces"], queryFn: getSurfaces });
@@ -199,7 +210,7 @@ export default function TravailPage() {
       </div>
 
       <EditProfileDialog profile={editingProfile} onClose={() => setEditingProfile(null)} onSave={(id, data) => updateProfileMut.mutate({ id, data })} />
-      <EditSurfaceDialog surface={editingSurface} onClose={() => setEditingSurface(null)} onSave={(id, data) => updateSurfaceMut.mutate({ id, data })} />
+      <EditSurfaceDialog surface={editingSurface} profiles={profiles} onClose={() => setEditingSurface(null)} onSave={(id, data) => updateSurfaceMut.mutate({ id, data })} />
       <NewProjectDialog open={showWizard} onClose={() => setShowWizard(false)} profiles={profiles} typesList={typesList} qc={qc} t={t} />
     </div>
   );
@@ -244,17 +255,68 @@ function EditProfileDialog({ profile, onClose, onSave }: { profile: Profile | nu
   );
 }
 
-function EditSurfaceDialog({ surface, onClose, onSave }: { surface: Surface | null; onClose: () => void; onSave: (id: string, data: Partial<Surface>) => void }) {
+function EditSurfaceDialog({ surface, profiles, onClose, onSave }: { surface: Surface | null; profiles: Profile[]; onClose: () => void; onSave: (id: string, data: Partial<Surface>) => void }) {
   const { t } = useLanguage();
-  const [loc, setLoc] = useState(surface?.localisation ?? "");
+  const [nomSurface, setNomSurface] = useState("");
+  const [loc, setLoc] = useState("");
+  const [tailleHa, setTailleHa] = useState<number | undefined>(undefined);
+  const [fkUser, setFkUser] = useState("");
+
+  useEffect(() => {
+    if (surface) {
+      setNomSurface(surface.nomSurface);
+      setLoc(surface.localisation);
+      setTailleHa(surface.tailleHa ?? undefined);
+      setFkUser(surface.fkUser ?? "");
+    }
+  }, [surface]);
+
   return (
-    <Dialog open={!!surface} onOpenChange={(o) => { if (!o) onClose(); else if (surface) setLoc(surface.localisation); }}>
-      <DialogContent>
-        <DialogHeader><DialogTitle>{t("travail.edit")} - {surface?.nomSurface}</DialogTitle></DialogHeader>
-        <form onSubmit={(e) => { e.preventDefault(); if (!surface) return; const fd = new FormData(e.currentTarget); onSave(surface.id, { nomSurface: fd.get("nomSurface") as string, localisation: loc }); }} className="space-y-4">
-          <div><Label>Nom</Label><Input name="nomSurface" defaultValue={surface?.nomSurface} /></div>
-          <div><Label>{t("surface.location")}</Label><LocationPicker value={loc} onChange={setLoc} /></div>
-          <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={onClose}>{t("common.cancel")}</Button><Button type="submit">{t("common.save")}</Button></div>
+    <Dialog open={!!surface} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Modifier la parcelle — {surface?.nomSurface}</DialogTitle>
+          <DialogDescription>Formulaire complet, champs pré-remplis.</DialogDescription>
+        </DialogHeader>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!surface) return;
+            onSave(surface.id, { nomSurface, localisation: loc, tailleHa, fkUser });
+          }}
+          className="space-y-4"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label>{t("wizard.surfaceName")}</Label>
+              <Input value={nomSurface} onChange={(e) => setNomSurface(e.target.value)} required />
+            </div>
+            <div>
+              <Label>{t("parcelle.taille")}</Label>
+              <Input type="number" step="0.01" min="0" value={tailleHa ?? ""} onChange={(e) => setTailleHa(e.target.value ? parseFloat(e.target.value) : undefined)} />
+            </div>
+            <div className="md:col-span-2">
+              <Label>{t("wizard.user")}</Label>
+              <Select value={fkUser} onValueChange={setFkUser}>
+                <SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger>
+                <SelectContent>
+                  {profiles.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.email || `${p.first_name} ${p.last_name}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div>
+            <Label>{t("surface.location")}</Label>
+            <LocationSelector value={loc} onChange={setLoc} />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
+            <Button type="submit"><Save className="mr-2 h-4 w-4" />{t("common.save")}</Button>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

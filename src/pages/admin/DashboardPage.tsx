@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getProfiles, getSurfaces, getVannes } from "@/services/data-service";
 import { useFilteredProfiles } from "@/hooks/useRoleFilter";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,7 +7,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Users, Grid3X3, AlertTriangle, ShieldCheck, Crown, Trophy, Star, Wifi, WifiOff, CalendarDays } from "lucide-react";
+import { Users, Grid3X3, AlertTriangle, ShieldCheck, Crown, Trophy, Star, Wifi, CalendarDays } from "lucide-react";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
 const COLORS = ["hsl(145,63%,32%)", "hsl(145,63%,50%)", "hsl(140,30%,70%)", "hsl(0,84%,60%)"];
@@ -18,6 +18,18 @@ type Range = "day" | "week" | "month" | "year" | "all";
 export default function DashboardPage() {
   const { t } = useLanguage();
   const [range, setRange] = useState<Range>("month");
+  const qc = useQueryClient();
+
+  // Realtime sync — invalidate KPIs instantly on any data change
+  useEffect(() => {
+    const ch = supabase
+      .channel("dashboard-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => qc.invalidateQueries({ queryKey: ["profiles"] }))
+      .on("postgres_changes", { event: "*", schema: "public", table: "surfaces" }, () => qc.invalidateQueries({ queryKey: ["surfaces"] }))
+      .on("postgres_changes", { event: "*", schema: "public", table: "vannes" }, () => qc.invalidateQueries({ queryKey: ["vannes"] }))
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [qc]);
 
   const { data: allProfiles = [] } = useQuery({ queryKey: ["profiles"], queryFn: getProfiles });
   const allFiltered = useFilteredProfiles(allProfiles);
@@ -38,16 +50,6 @@ export default function DashboardPage() {
     else return null;
     return d.getTime();
   }, [range]);
-
-  const { data: notifications = [] } = useQuery({
-    queryKey: ["subscription_notifications"],
-    queryFn: async () => {
-      const { data } = await supabase.from("subscription_notifications").select("*").order("sent_at", { ascending: false }).limit(200);
-      return data ?? [];
-    },
-  });
-
-  const filteredNotifs = notifications.filter((n: any) => !cutoff || new Date(n.sent_at).getTime() >= cutoff);
 
   const now = Date.now();
   const subscribed = profiles.filter(c => c.date_exp_abo && new Date(c.date_exp_abo).getTime() > now);
@@ -105,7 +107,6 @@ export default function DashboardPage() {
     { label: "Parcelles", value: surfaces.length, icon: Grid3X3, color: "bg-amber-500/10 text-amber-600" },
     { label: "Parcelles connectées", value: connectedSurfaces, icon: Wifi, color: "bg-green-500/10 text-green-600" },
     { label: "Sous-Admins", value: sousAdmins.length, icon: Crown, color: "bg-violet-500/10 text-violet-600" },
-    { label: "Notifications", value: filteredNotifs.length, icon: AlertTriangle, color: "bg-orange-500/10 text-orange-600" },
   ];
 
   const ranges: { v: Range; label: string }[] = [
