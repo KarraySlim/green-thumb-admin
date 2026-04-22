@@ -28,6 +28,16 @@ export default function DonneesDetailleesPage() {
   const { data: plantes = [] } = useQuery({ queryKey: ["plantes"], queryFn: getPlantes });
   const { data: vannes = [] } = useQuery({ queryKey: ["vannes"], queryFn: getVannes });
   const { data: surfaces = [] } = useQuery({ queryKey: ["surfaces"], queryFn: getSurfaces });
+  const { data: profiles = [] } = useQuery({ queryKey: ["profiles"], queryFn: getProfiles });
+
+  const userBySurfaceId = useMemo(() => {
+    const m = new Map<string, string>();
+    surfaces.forEach(s => {
+      const u = profiles.find(p => p.id === s.fkUser);
+      if (u) m.set(s.id, `${u.first_name ?? ""} ${u.last_name ?? ""}`.trim() || u.email || "—");
+    });
+    return m;
+  }, [surfaces, profiles]);
 
   // Types CRUD
   const [showTypeForm, setShowTypeForm] = useState(false);
