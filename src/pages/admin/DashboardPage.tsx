@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Users, Grid3X3, AlertTriangle, ShieldCheck, Crown, Trophy, Star, Wifi, CalendarDays } from "lucide-react";
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, AreaChart, Area, LineChart, Line } from "recharts";
 
 const COLORS = ["hsl(145,63%,32%)", "hsl(145,63%,50%)", "hsl(140,30%,70%)", "hsl(0,84%,60%)"];
 const COLORS2 = ["hsl(210,80%,55%)", "hsl(30,90%,55%)", "hsl(145,63%,40%)", "hsl(280,60%,55%)"];
@@ -94,6 +94,33 @@ export default function DashboardPage() {
     name: `${c.first_name} ${c.last_name?.charAt(0) ?? ""}`,
     surfaces: surfaces.filter(s => s.fkUser === c.id).length,
   })).filter(d => d.surfaces > 0);
+
+  // Time series: evolution of users / subscribers / parcelles over selected range
+  const timeSeries = useMemo(() => {
+    const buckets = range === "day" ? 12 : range === "week" ? 7 : range === "month" ? 15 : range === "year" ? 12 : 12;
+    const getCreated = (o: any) => new Date(o.created_at ?? o.createdAt ?? 0).getTime();
+    const allTimes = allFiltered.map(getCreated).filter(t => t > 0);
+    const start = cutoff ?? (allTimes.length ? Math.min(...allTimes) : Date.now() - 30 * 86400_000);
+    const end = Date.now();
+    const step = (end - start) / buckets;
+    const fmt = (d: Date) => {
+      if (range === "day") return d.getHours() + "h";
+      if (range === "year" || range === "all") return d.toLocaleDateString("fr-FR", { month: "short", year: "2-digit" });
+      return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "short" });
+    };
+    return Array.from({ length: buckets }, (_, i) => {
+      const t = start + step * (i + 1);
+      const users = allFiltered.filter(p => getCreated(p) <= t && getCreated(p) > 0).length;
+      const subs = profiles.filter(p => {
+        if (!p.date_deb_abo) return false;
+        const deb = new Date(p.date_deb_abo).getTime();
+        const exp = p.date_exp_abo ? new Date(p.date_exp_abo).getTime() : Infinity;
+        return deb <= t && exp >= t;
+      }).length;
+      const parc = surfaces.filter(s => getCreated(s) <= t && getCreated(s) > 0).length;
+      return { name: fmt(new Date(t)), Utilisateurs: users, Abonnés: subs, Parcelles: parc };
+    });
+  }, [range, cutoff, allFiltered, profiles, surfaces]);
 
   const expiringSoon = profiles.filter(c => {
     if (!c.date_exp_abo) return false;
@@ -187,6 +214,38 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader><CardTitle className="text-base">Évolution dans le temps</CardTitle></CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={300}>
+            <AreaChart data={timeSeries}>
+              <defs>
+                <linearGradient id="gUsers" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(210,80%,55%)" stopOpacity={0.5} />
+                  <stop offset="100%" stopColor="hsl(210,80%,55%)" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="gSubs" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(145,63%,40%)" stopOpacity={0.5} />
+                  <stop offset="100%" stopColor="hsl(145,63%,40%)" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="gParc" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(30,90%,55%)" stopOpacity={0.5} />
+                  <stop offset="100%" stopColor="hsl(30,90%,55%)" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <XAxis dataKey="name" fontSize={11} />
+              <YAxis allowDecimals={false} fontSize={11} />
+              <Tooltip />
+              <Legend />
+              <Area type="monotone" dataKey="Utilisateurs" stroke="hsl(210,80%,55%)" fill="url(#gUsers)" strokeWidth={2} />
+              <Area type="monotone" dataKey="Abonnés" stroke="hsl(145,63%,40%)" fill="url(#gSubs)" strokeWidth={2} />
+              <Area type="monotone" dataKey="Parcelles" stroke="hsl(30,90%,55%)" fill="url(#gParc)" strokeWidth={2} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
