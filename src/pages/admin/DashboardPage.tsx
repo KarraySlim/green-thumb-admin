@@ -215,6 +215,38 @@ export default function DashboardPage() {
         </Card>
       </div>
 
+      <Card>
+        <CardHeader><CardTitle className="text-base">Évolution dans le temps</CardTitle></CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={300}>
+            <AreaChart data={timeSeries}>
+              <defs>
+                <linearGradient id="gUsers" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(210,80%,55%)" stopOpacity={0.5} />
+                  <stop offset="100%" stopColor="hsl(210,80%,55%)" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="gSubs" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(145,63%,40%)" stopOpacity={0.5} />
+                  <stop offset="100%" stopColor="hsl(145,63%,40%)" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="gParc" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(30,90%,55%)" stopOpacity={0.5} />
+                  <stop offset="100%" stopColor="hsl(30,90%,55%)" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <XAxis dataKey="name" fontSize={11} />
+              <YAxis allowDecimals={false} fontSize={11} />
+              <Tooltip />
+              <Legend />
+              <Area type="monotone" dataKey="Utilisateurs" stroke="hsl(210,80%,55%)" fill="url(#gUsers)" strokeWidth={2} />
+              <Area type="monotone" dataKey="Abonnés" stroke="hsl(145,63%,40%)" fill="url(#gSubs)" strokeWidth={2} />
+              <Area type="monotone" dataKey="Parcelles" stroke="hsl(30,90%,55%)" fill="url(#gParc)" strokeWidth={2} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader><CardTitle className="text-base">Répartition des abonnements</CardTitle></CardHeader>
