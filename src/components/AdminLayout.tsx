@@ -4,6 +4,8 @@ import { Droplets, Grid3X3, Users, Briefcase, LogOut, CreditCard, LayoutDashboar
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
@@ -14,17 +16,22 @@ import {
   SidebarTrigger, SidebarInset, SidebarHeader, SidebarFooter,
 } from "@/components/ui/sidebar";
 
-const navItems = [
+type NavItem = { titleKey: string; url: string; icon: any; roles: string[]; badgeKey?: "reclamations" };
+
+const navGlobal: NavItem[] = [
   { titleKey: "nav.dashboard", url: "/admin/dashboard", icon: LayoutDashboard, roles: ["ADMIN", "SOUS_ADMIN"] },
+  { titleKey: "nav.users", url: "/admin/users", icon: Users, roles: ["ADMIN", "SOUS_ADMIN"] },
+  { titleKey: "nav.subscriptions", url: "/admin/subscriptions", icon: CreditCard, roles: ["ADMIN"] },
+  { titleKey: "nav.rapports", url: "/admin/rapports", icon: FileBarChart, roles: ["ADMIN", "SOUS_ADMIN"] },
+  { titleKey: "nav.reclamations", url: "/admin/reclamations", icon: MessageSquare, roles: ["ADMIN", "SOUS_ADMIN"], badgeKey: "reclamations" },
+  { titleKey: "nav.baseDonnees", url: "/admin/base-donnees", icon: HardDrive, roles: ["ADMIN", "SOUS_ADMIN"] },
+];
+
+const navTravail: NavItem[] = [
   { titleKey: "nav.travail", url: "/admin/travail", icon: Briefcase, roles: ["ADMIN", "SOUS_ADMIN"] },
   { titleKey: "nav.surfaces", url: "/admin/surfaces", icon: Grid3X3, roles: ["ADMIN", "SOUS_ADMIN"] },
   { titleKey: "nav.donneesDetaillees", url: "/admin/donnees-detaillees", icon: Database, roles: ["ADMIN", "SOUS_ADMIN"] },
   { titleKey: "nav.capteurs", url: "/admin/capteurs", icon: Cpu, roles: ["ADMIN", "SOUS_ADMIN"] },
-  { titleKey: "nav.users", url: "/admin/users", icon: Users, roles: ["ADMIN", "SOUS_ADMIN"] },
-  { titleKey: "nav.subscriptions", url: "/admin/subscriptions", icon: CreditCard, roles: ["ADMIN"] },
-  { titleKey: "nav.rapports", url: "/admin/rapports", icon: FileBarChart, roles: ["ADMIN", "SOUS_ADMIN"] },
-  { titleKey: "nav.reclamations", url: "/admin/reclamations", icon: MessageSquare, roles: ["ADMIN", "SOUS_ADMIN"] },
-  { titleKey: "nav.baseDonnees", url: "/admin/base-donnees", icon: HardDrive, roles: ["ADMIN", "SOUS_ADMIN"] },
 ];
 
 const pageTitleKeys: Record<string, string> = {
@@ -48,10 +55,36 @@ export default function AdminLayout() {
   const navigate = useNavigate();
   const { user, profile, loading, signOut } = useAuth();
   const { t } = useLanguage();
+  const qc = useQueryClient();
   const userRole = profile?.user_role;
   const titleKey = pageTitleKeys[location.pathname];
   const title = titleKey ? t(titleKey) : "Administration";
   const isClientUser = userRole === "CLIENT";
+
+  // Pending reclamations count (real-time)
+  const { data: pendingReclamations = 0 } = useQuery({
+    queryKey: ["reclamations-pending-count"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("reclamations")
+        .select("id", { count: "exact", head: true })
+        .eq("statut", "en_attente");
+      return count ?? 0;
+    },
+    enabled: !!profile && !isClientUser,
+  });
+
+  useEffect(() => {
+    if (!profile || isClientUser) return;
+    const ch = supabase
+      .channel("reclamations-badge")
+      .on("postgres_changes", { event: "*", schema: "public", table: "reclamations" }, () => {
+        qc.invalidateQueries({ queryKey: ["reclamations-pending-count"] });
+        qc.invalidateQueries({ queryKey: ["reclamations"] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [profile, isClientUser, qc]);
 
   // Dynamic branding for SOUS_ADMIN
   const isSousAdmin = userRole === "SOUS_ADMIN";
