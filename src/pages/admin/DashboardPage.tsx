@@ -142,16 +142,16 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {stats.map((s) => (
           <Card key={s.label} className="hover:shadow-md transition-shadow">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className={`p-2.5 rounded-xl ${s.color}`}>
-                <s.icon className="h-5 w-5" />
+            <CardContent className="p-3 flex items-center gap-2.5 min-w-0">
+              <div className={`p-2 rounded-lg shrink-0 ${s.color}`}>
+                <s.icon className="h-4 w-4" />
               </div>
-              <div>
-                <p className="text-2xl font-bold text-foreground">{s.value}</p>
-                <p className="text-xs text-muted-foreground">{s.label}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-xl font-bold text-foreground leading-tight truncate">{s.value}</p>
+                <p className="text-[11px] text-muted-foreground leading-tight truncate" title={s.label}>{s.label}</p>
               </div>
             </CardContent>
           </Card>
