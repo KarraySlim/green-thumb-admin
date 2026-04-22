@@ -153,10 +153,35 @@ export default function AdminLayout() {
           </SidebarHeader>
           <SidebarContent>
             <SidebarGroup>
-              <SidebarGroupLabel>{t("nav.navigation")}</SidebarGroupLabel>
+              <SidebarGroupLabel>Général</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  {navItems.filter(item => item.roles.includes(userRole)).map((item) => (
+                  {navGlobal.filter(item => item.roles.includes(userRole)).map((item) => (
+                    <SidebarMenuItem key={item.titleKey}>
+                      <SidebarMenuButton asChild>
+                        <NavLink to={item.url} end className="hover:bg-sidebar-accent/50" activeClassName="bg-primary/10 text-primary font-medium">
+                          <item.icon className="mr-2 h-4 w-4" />
+                          <span className="flex-1">{t(item.titleKey)}</span>
+                          {item.badgeKey === "reclamations" && pendingReclamations > 0 && (
+                            <span
+                              className="ml-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold animate-in zoom-in-50 duration-200"
+                              aria-label={`${pendingReclamations} réclamations en attente`}
+                            >
+                              {pendingReclamations > 99 ? "99+" : pendingReclamations}
+                            </span>
+                          )}
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+            <SidebarGroup>
+              <SidebarGroupLabel>{t("nav.travail")}</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {navTravail.filter(item => item.roles.includes(userRole)).map((item) => (
                     <SidebarMenuItem key={item.titleKey}>
                       <SidebarMenuButton asChild>
                         <NavLink to={item.url} end className="hover:bg-sidebar-accent/50" activeClassName="bg-primary/10 text-primary font-medium">
