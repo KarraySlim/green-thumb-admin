@@ -1,6 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getProfiles, getSurfaces, getVannes, getTypesPlante, updateProfile, updateSurface, createSurface, createPlante, createVanne } from "@/services/data-service";
+import { supabase } from "@/integrations/supabase/client";
 import { Switch } from "@/components/ui/switch";
 import { useFilteredProfiles } from "@/hooks/useRoleFilter";
 import { useAuth } from "@/hooks/useAuth";
@@ -52,6 +53,16 @@ export default function TravailPage() {
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
   const [editingSurface, setEditingSurface] = useState<Surface | null>(null);
   const [showWizard, setShowWizard] = useState(false);
+
+  // Realtime sync for travail page
+  useEffect(() => {
+    const ch = supabase
+      .channel("travail-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "surfaces" }, () => qc.invalidateQueries({ queryKey: ["surfaces"] }))
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => qc.invalidateQueries({ queryKey: ["profiles"] }))
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [qc]);
 
   const { data: allProfiles = [] } = useQuery({ queryKey: ["profiles"], queryFn: getProfiles });
   const { data: surfaces = [] } = useQuery({ queryKey: ["surfaces"], queryFn: getSurfaces });
