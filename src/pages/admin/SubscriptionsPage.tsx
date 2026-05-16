@@ -152,13 +152,6 @@ export default function SubscriptionsPage() {
                   <Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent className="max-w-xs">{OPT_TOOLTIPS.electro}</TooltipContent></Tooltip>
                 </Label>
               </div>
-              <div className="flex items-center gap-2">
-                <Checkbox id="sante" checked={optSante} onCheckedChange={(v) => setOptSante(!!v)} />
-                <Label htmlFor="sante" className="text-sm cursor-pointer flex items-center gap-1">
-                  SantéPlante
-                  <Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent className="max-w-xs">{OPT_TOOLTIPS.sante}</TooltipContent></Tooltip>
-                </Label>
-              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div><Label>{t("sub.start")}</Label><Input name="dateDebAbo" type="date" defaultValue={editing?.date_deb_abo ?? ""} /></div>
