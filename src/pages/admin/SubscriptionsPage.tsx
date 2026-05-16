@@ -53,19 +53,6 @@ export default function SubscriptionsPage() {
     return electro ? "op1_op2" : "op1";
   };
 
-  const openEdit = (p: Profile) => {
-    setOptElectro(!!p.abo_electrovanne);
-    setOptSante(!!p.abo_sante_plante);
-    setEditing(p);
-  };
-
-  // derive type_abo from selected options
-  const computeTypeAbo = (electro: boolean, sante: boolean): "op1" | "op1_op2" | "full" => {
-    if (electro && sante) return "full";
-    if (electro || sante) return "op1_op2";
-    return "op1";
-  };
-
   const handleSave = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
@@ -77,8 +64,7 @@ export default function SubscriptionsPage() {
         date_exp_abo: fd.get("dateExpAbo") as string || undefined,
         abo_capteur_sol: true,
         abo_electrovanne: optElectro,
-        abo_sante_plante: optSante,
-        type_abo: computeTypeAbo(optElectro, optSante),
+        type_abo: computeTypeAbo(optElectro),
       },
     });
   };
