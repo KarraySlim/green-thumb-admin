@@ -81,7 +81,7 @@ export default function SubscriptionsPage() {
     const opts: string[] = [];
     if (p.abo_capteur_sol !== false) opts.push("CapteurSol");
     if (p.abo_electrovanne) opts.push("ElectroVanne");
-    if (p.abo_sante_plante) opts.push("SantéPlante");
+    
     return opts.length ? opts.join(" + ") : "—";
   };
 
@@ -119,7 +119,7 @@ export default function SubscriptionsPage() {
                     <TableCell>
                       <div className="flex gap-1">
                         <Button variant="ghost" size="sm" onClick={() => openEdit(p)}><Pencil className="h-3 w-3" /></Button>
-                        {(p.date_exp_abo || p.abo_electrovanne || p.abo_sante_plante) && (
+                        {(p.date_exp_abo || p.abo_electrovanne) && (
                           <Button variant="ghost" size="sm" className="text-destructive" onClick={() => removeMut.mutate(p.id)}><Trash2 className="h-3 w-3" /></Button>
                         )}
                       </div>
