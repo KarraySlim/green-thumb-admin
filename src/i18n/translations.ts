@@ -16,6 +16,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     "nav.logout": "Déconnexion",
     "nav.navigation": "Navigation",
     "nav.reclamations": "Réclamations",
+    "nav.finance": "Finance",
     // Dashboard
     "dashboard.title": "Tableau de bord",
     "dashboard.totalUsers": "Utilisateurs",
@@ -415,6 +416,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     "parcelle.taille": "Size (ha)",
     "nav.baseDonnees": "Database",
     "nav.reclamations": "Complaints",
+    "nav.finance": "Finance",
     "bdd.title": "Database",
     "bdd.userFile": "User file",
     "bdd.info": "Info",
@@ -618,6 +620,7 @@ export const translations: Record<Lang, Record<string, string>> = {
     "parcelle.taille": "المساحة (هكتار)",
     "nav.baseDonnees": "قاعدة البيانات",
     "nav.reclamations": "الشكاوى",
+    "nav.finance": "المالية",
     "bdd.title": "قاعدة البيانات",
     "bdd.userFile": "ملف المستخدم",
     "bdd.info": "المعلومات",
