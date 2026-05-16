@@ -18,7 +18,6 @@ import { toast } from "@/hooks/use-toast";
 const OPT_TOOLTIPS = {
   capteur: "Capteur de sol pour mesurer humidité, salinité, pH et température en temps réel. Inclus dans toute formule.",
   electro: "Électrovanne connectée pour contrôler l'irrigation à distance et automatiser l'arrosage par parcelle.",
-  sante: "Surveillance de la santé des plantes : détection précoce du stress hydrique et anomalies foliaires.",
 };
 import { Profile } from "@/types/models";
 
@@ -29,7 +28,6 @@ export default function SubscriptionsPage() {
   const profiles = useFilteredProfiles(allProfiles);
   const [editing, setEditing] = useState<Profile | null>(null);
   const [optElectro, setOptElectro] = useState(false);
-  const [optSante, setOptSante] = useState(false);
 
   const updateMut = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<Profile> }) => updateProfile(id, data),
@@ -42,10 +40,18 @@ export default function SubscriptionsPage() {
       date_exp_abo: undefined,
       type_abo: undefined,
       abo_electrovanne: false,
-      abo_sante_plante: false,
     }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["profiles"] }); toast({ title: t("sub.removed") }); },
   });
+
+  const openEdit = (p: Profile) => {
+    setOptElectro(!!p.abo_electrovanne);
+    setEditing(p);
+  };
+
+  const computeTypeAbo = (electro: boolean): "op1" | "op1_op2" => {
+    return electro ? "op1_op2" : "op1";
+  };
 
   const openEdit = (p: Profile) => {
     setOptElectro(!!p.abo_electrovanne);
