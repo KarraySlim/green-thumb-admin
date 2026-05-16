@@ -18,7 +18,6 @@ import { toast } from "@/hooks/use-toast";
 const OPT_TOOLTIPS = {
   capteur: "Capteur de sol pour mesurer humidité, salinité, pH et température en temps réel. Inclus dans toute formule.",
   electro: "Électrovanne connectée pour contrôler l'irrigation à distance et automatiser l'arrosage par parcelle.",
-  sante: "Surveillance de la santé des plantes : détection précoce du stress hydrique et anomalies foliaires.",
 };
 import { Profile } from "@/types/models";
 
@@ -29,7 +28,6 @@ export default function SubscriptionsPage() {
   const profiles = useFilteredProfiles(allProfiles);
   const [editing, setEditing] = useState<Profile | null>(null);
   const [optElectro, setOptElectro] = useState(false);
-  const [optSante, setOptSante] = useState(false);
 
   const updateMut = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<Profile> }) => updateProfile(id, data),
@@ -42,22 +40,17 @@ export default function SubscriptionsPage() {
       date_exp_abo: undefined,
       type_abo: undefined,
       abo_electrovanne: false,
-      abo_sante_plante: false,
     }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["profiles"] }); toast({ title: t("sub.removed") }); },
   });
 
   const openEdit = (p: Profile) => {
     setOptElectro(!!p.abo_electrovanne);
-    setOptSante(!!p.abo_sante_plante);
     setEditing(p);
   };
 
-  // derive type_abo from selected options
-  const computeTypeAbo = (electro: boolean, sante: boolean): "op1" | "op1_op2" | "full" => {
-    if (electro && sante) return "full";
-    if (electro || sante) return "op1_op2";
-    return "op1";
+  const computeTypeAbo = (electro: boolean): "op1" | "op1_op2" => {
+    return electro ? "op1_op2" : "op1";
   };
 
   const handleSave = (e: React.FormEvent<HTMLFormElement>) => {
@@ -71,8 +64,7 @@ export default function SubscriptionsPage() {
         date_exp_abo: fd.get("dateExpAbo") as string || undefined,
         abo_capteur_sol: true,
         abo_electrovanne: optElectro,
-        abo_sante_plante: optSante,
-        type_abo: computeTypeAbo(optElectro, optSante),
+        type_abo: computeTypeAbo(optElectro),
       },
     });
   };
@@ -89,7 +81,7 @@ export default function SubscriptionsPage() {
     const opts: string[] = [];
     if (p.abo_capteur_sol !== false) opts.push("CapteurSol");
     if (p.abo_electrovanne) opts.push("ElectroVanne");
-    if (p.abo_sante_plante) opts.push("SantéPlante");
+    
     return opts.length ? opts.join(" + ") : "—";
   };
 
@@ -127,7 +119,7 @@ export default function SubscriptionsPage() {
                     <TableCell>
                       <div className="flex gap-1">
                         <Button variant="ghost" size="sm" onClick={() => openEdit(p)}><Pencil className="h-3 w-3" /></Button>
-                        {(p.date_exp_abo || p.abo_electrovanne || p.abo_sante_plante) && (
+                        {(p.date_exp_abo || p.abo_electrovanne) && (
                           <Button variant="ghost" size="sm" className="text-destructive" onClick={() => removeMut.mutate(p.id)}><Trash2 className="h-3 w-3" /></Button>
                         )}
                       </div>
@@ -158,13 +150,6 @@ export default function SubscriptionsPage() {
                 <Label htmlFor="electro" className="text-sm cursor-pointer flex items-center gap-1">
                   ElectroVanne
                   <Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent className="max-w-xs">{OPT_TOOLTIPS.electro}</TooltipContent></Tooltip>
-                </Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Checkbox id="sante" checked={optSante} onCheckedChange={(v) => setOptSante(!!v)} />
-                <Label htmlFor="sante" className="text-sm cursor-pointer flex items-center gap-1">
-                  SantéPlante
-                  <Tooltip><TooltipTrigger asChild><Info className="h-3 w-3 text-muted-foreground cursor-help" /></TooltipTrigger><TooltipContent className="max-w-xs">{OPT_TOOLTIPS.sante}</TooltipContent></Tooltip>
                 </Label>
               </div>
             </div>

@@ -21,6 +21,7 @@ import RapportsPage from "@/pages/admin/RapportsPage";
 import SurfaceDetailPage from "@/pages/admin/SurfaceDetailPage";
 import BaseDonneesPage from "@/pages/admin/BaseDonneesPage";
 import ReclamationsPage from "@/pages/admin/ReclamationsPage";
+import FinancePage from "@/pages/admin/FinancePage";
 import LoginPage from "@/pages/auth/LoginPage";
 import SignupPage from "@/pages/auth/SignupPage";
 import ForgotPasswordPage from "@/pages/auth/ForgotPasswordPage";
@@ -59,6 +60,7 @@ const App = () => (
                 <Route path="rapport-eau" element={<RapportEauPage />} />
                 <Route path="base-donnees" element={<BaseDonneesPage />} />
                 <Route path="reclamations" element={<ReclamationsPage />} />
+                <Route path="finance" element={<FinancePage />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>

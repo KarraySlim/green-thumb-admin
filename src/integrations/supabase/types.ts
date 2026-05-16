@@ -41,6 +41,87 @@ export type Database = {
         }
         Relationships: []
       }
+      device_sales: {
+        Row: {
+          buyer_profile_id: string
+          created_at: string
+          device_id: string
+          id: string
+          payment_method: string
+          quantity: number
+          status: string
+          total_dt: number
+          unit_price_dt: number
+          validated_at: string | null
+          validated_by: string | null
+        }
+        Insert: {
+          buyer_profile_id: string
+          created_at?: string
+          device_id: string
+          id?: string
+          payment_method?: string
+          quantity?: number
+          status?: string
+          total_dt?: number
+          unit_price_dt?: number
+          validated_at?: string | null
+          validated_by?: string | null
+        }
+        Update: {
+          buyer_profile_id?: string
+          created_at?: string
+          device_id?: string
+          id?: string
+          payment_method?: string
+          quantity?: number
+          status?: string
+          total_dt?: number
+          unit_price_dt?: number
+          validated_at?: string | null
+          validated_by?: string | null
+        }
+        Relationships: []
+      }
+      devices: {
+        Row: {
+          available: boolean
+          connected_state: string
+          created_at: string
+          device_type: string
+          id: string
+          info: string | null
+          name: string
+          price_dt: number
+          stock: number
+          updated_at: string
+        }
+        Insert: {
+          available?: boolean
+          connected_state?: string
+          created_at?: string
+          device_type: string
+          id?: string
+          info?: string | null
+          name: string
+          price_dt?: number
+          stock?: number
+          updated_at?: string
+        }
+        Update: {
+          available?: boolean
+          connected_state?: string
+          created_at?: string
+          device_type?: string
+          id?: string
+          info?: string | null
+          name?: string
+          price_dt?: number
+          stock?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       plantes: {
         Row: {
           age: number
@@ -332,6 +413,78 @@ export type Database = {
           days_remaining?: number
           id?: string
           sent_at?: string
+        }
+        Relationships: []
+      }
+      subscription_payments: {
+        Row: {
+          amount_dt: number
+          created_at: string
+          date_exp: string | null
+          date_start: string | null
+          id: string
+          payment_method: string
+          plan_id: string
+          profile_id: string
+          status: string
+          validated_at: string | null
+          validated_by: string | null
+        }
+        Insert: {
+          amount_dt?: number
+          created_at?: string
+          date_exp?: string | null
+          date_start?: string | null
+          id?: string
+          payment_method?: string
+          plan_id: string
+          profile_id: string
+          status?: string
+          validated_at?: string | null
+          validated_by?: string | null
+        }
+        Update: {
+          amount_dt?: number
+          created_at?: string
+          date_exp?: string | null
+          date_start?: string | null
+          id?: string
+          payment_method?: string
+          plan_id?: string
+          profile_id?: string
+          status?: string
+          validated_at?: string | null
+          validated_by?: string | null
+        }
+        Relationships: []
+      }
+      subscription_plans: {
+        Row: {
+          active: boolean
+          created_at: string
+          duration_days: number
+          features: Json
+          id: string
+          name: string
+          price_dt: number
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          duration_days?: number
+          features?: Json
+          id?: string
+          name: string
+          price_dt?: number
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          duration_days?: number
+          features?: Json
+          id?: string
+          name?: string
+          price_dt?: number
         }
         Relationships: []
       }
