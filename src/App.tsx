@@ -22,6 +22,9 @@ import SurfaceDetailPage from "@/pages/admin/SurfaceDetailPage";
 import BaseDonneesPage from "@/pages/admin/BaseDonneesPage";
 import ReclamationsPage from "@/pages/admin/ReclamationsPage";
 import FinancePage from "@/pages/admin/FinancePage";
+import StockPage from "@/pages/admin/StockPage";
+import ReservationMaterielPage from "@/pages/admin/ReservationMaterielPage";
+import VentesPage from "@/pages/admin/VentesPage";
 import LoginPage from "@/pages/auth/LoginPage";
 import SignupPage from "@/pages/auth/SignupPage";
 import ForgotPasswordPage from "@/pages/auth/ForgotPasswordPage";
@@ -61,6 +64,9 @@ const App = () => (
                 <Route path="base-donnees" element={<BaseDonneesPage />} />
                 <Route path="reclamations" element={<ReclamationsPage />} />
                 <Route path="finance" element={<FinancePage />} />
+                <Route path="stock" element={<StockPage />} />
+                <Route path="reservation-materiel" element={<ReservationMaterielPage />} />
+                <Route path="ventes" element={<VentesPage />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
