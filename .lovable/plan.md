@@ -1,58 +1,138 @@
+## Plan: Module STOCK + Refonte Finance/Ventes
 
-
-# React Admin Dashboard — CRUD pour Irrigation Management
-
-## Vue d'ensemble
-Application React admin complète avec des pages CRUD pour gérer les entités d'un système d'irrigation. L'app utilisera des données mockées par défaut, avec une architecture prête à se connecter à un backend Ktor REST API.
+Ce module ajoute un système complet de gestion de stock, réservation matériel (Kanban), et refonte de la partie Finance/Ventes avec confirmation sécurisée.
 
 ---
 
-## 1. Layout & Navigation
-- **Sidebar** avec menu de navigation : Surfaces, Plantes, Vannes, Types de plante, Clients
-- **Header** avec titre de la page active
-- Route `/` redirige vers `/admin/surfaces`
-- Design épuré, professionnel, style dashboard admin
+### 1. Base de données (migration)
 
-## 2. Module Clients
-- **Liste** : tableau avec email, nom, prénom, rôle, téléphone, localisation
-- **Créer** : formulaire avec tous les champs (email, prénom, nom, rôle CLIENT/ADMIN, téléphone, date de naissance, localisation)
-- **Supprimer** : bouton avec confirmation dialog
-- Route : `/admin/clients`
+Nouvelles tables :
 
-## 3. Module Types de Plante
-- **Liste** : tableau avec nom, type, besoin en eau par plante
-- **Créer** : formulaire avec nom_plante, type_plante, besoin_eau_par_plante
-- **Supprimer** : avec confirmation
-- Route : `/admin/types-plante`
+- **`stock_items`** — catalogue stock
+  - `name`, `category`, `purchase_price_dt`, `quantity`, `features` (jsonb), `low_stock_threshold` (défaut 5)
+  - Calcul stock_value côté front (price × quantity)
 
-## 4. Module Surfaces
-- **Liste** : tableau affichant nom_surface, localisation, nb_vanne, client associé (email), type de sol — jointure affichée
-- **Créer** : formulaire avec nom_surface, localisation, sélecteur de client (dropdown)
-- **Supprimer** : avec confirmation (cascade sur plantes et vannes)
-- Route : `/admin/surfaces`
+- **`stock_movements`** — historique mouvements
+  - `stock_item_id`, `type` (`in`/`out`/`reservation`/`adjustment`), `quantity`, `reason`, `reservation_id`, `created_by`
 
-## 5. Module Plantes
-- **Liste** : tableau avec nom_plante, âge, surface associée (nom_surface), type de plante (nom) — jointures affichées
-- **Créer** : formulaire avec nom, âge, sélecteur de surface et sélecteur de type de plante (dropdowns)
-- **Supprimer** : avec confirmation
-- Route : `/admin/plantes`
+- **`material_reservations`** — Kanban demandes
+  - `profile_id` (client), `surface_id` (parcelle, nullable), `subscription_plan_id` (nullable)
+  - `status` enum texte : `nouvelle_demande` | `en_analyse` | `reserve` | `confirme` | `installe`
+  - `notes`, `total_devices_price_dt`, `created_by`, `updated_at`
 
-## 6. Module Vannes
-- **Liste** : tableau avec nom_vanne, débit eau, nb plantes par vanne, surface associée (nom_surface) — jointure affichée
-- **Créer** : formulaire avec nom, débit, nb_plante_par_vanne, sélecteur de surface
-- **Supprimer** : avec confirmation
-- Recalcul automatique du nb_vanne de la surface après ajout/suppression
-- Route : `/admin/vannes`
+- **`reservation_items`** — lignes d'une réservation
+  - `reservation_id`, `stock_item_id`, `quantity`, `unit_price_dt`
 
-## 7. Service Layer & API Ready
-- Couche de services avec des fonctions CRUD pour chaque entité
-- Données mockées en local (seed de démo : 1 client admin, 1 type plante Olivier, 1 surface, 1 plante, 1 vanne)
-- Configuration centralisée de l'URL API pour basculer facilement vers le backend Ktor
-- Utilisation de React Query pour la gestion des requêtes
+- **`client_sales`** — table VENTES (après confirmation)
+  - `profile_id`, `reservation_id`, `subscription_plan_id`
+  - `subscription_price_dt`, `equipment_price_dt`, `total_dt`
+  - `payment_method` (`especes` | `carte` | `virement` | `mobile`)
+  - `status` (`en_attente` | `confirme` | `refuse`)
+  - `confirmed_by`, `confirmed_at`
 
-## 8. UX & Feedback
-- Notifications toast pour succès/erreurs des opérations CRUD
-- Dialogues de confirmation avant suppression
-- États de chargement sur les tableaux et formulaires
-- Validation des formulaires côté client
+- **`support_notifications`** — notifications support
+  - `type` (`new_parcelle` | `low_stock` | `sale_confirmed` | `big_reservation`)
+  - `title`, `message`, `link`, `read` (bool), `created_for_role`
 
+RLS : admin/sous_admin gèrent tout, authenticated peut lire. Realtime activé sur toutes ces tables.
+
+Trigger auto :
+- À l'insertion d'une `surface` → créer automatiquement une `material_reservations` (status `nouvelle_demande`) + `support_notifications` (`new_parcelle`).
+- À l'update statut `reserve` → décrémenter `stock_items.quantity` + créer `stock_movements`.
+- À l'update statut `installe` → notification "installation terminée".
+
+---
+
+### 2. Nouveau menu latéral
+
+`AdminLayout.tsx` : ajout d'une section **STOCK** au-dessus de Finance, avec sous-items :
+- Stock (catalogue)
+- Réservation Matériel (Kanban)
+- Ventes
+
+Icônes : `Package`, `ClipboardList`, `ShoppingCart`.
+
+---
+
+### 3. Page Stock (`StockPage.tsx`)
+
+- Formulaire d'ajout (Dialog) : Nom, Prix, Catégorie (select : Capteur / Vanne / Module / Contrôleur / Autre), Quantité, Fonctionnalités (textarea), threshold.
+- Tableau dynamique : Appareil | Catégorie | Prix Achat | Quantité | Valeur Stock | Badge | Actions.
+  - Badge couleur : `quantity > threshold` vert, `≤ threshold` orange, `=0` rouge.
+- Actions : Modifier (Dialog), Supprimer (confirm), Historique (Dialog listant `stock_movements`).
+- KPIs en haut : valeur totale stock, nb articles, alertes rupture.
+- Realtime updates.
+
+---
+
+### 4. Page Réservation Matériel (`ReservationMaterielPage.tsx`)
+
+Interface **Kanban Drag & Drop** avec 5 colonnes :
+1. Nouvelle Demande
+2. En Analyse
+3. Réservé
+4. Confirmé
+5. Installé
+
+- Bibliothèque : `@dnd-kit/core` + `@dnd-kit/sortable` (déjà supporté).
+- Chaque carte : nom client, parcelle liée, abonnement, total matériel, date.
+- Click carte → Dialog détail :
+  - Liste appareils réservés (ajout/suppression depuis stock)
+  - Sélection abonnement (récupéré de `subscription_plans`)
+  - Notes support
+  - Bouton "Réserver le matériel" (décrémente stock automatiquement)
+- Drag entre colonnes = update statut.
+- Realtime.
+
+---
+
+### 5. Refonte Finance
+
+`FinancePage.tsx` :
+- ❌ Supprimer onglet "Appareils" (catalogue devices).
+- Conserver onglets : Plans d'abonnement, Paiements abonnements.
+- ✅ Ajouter onglet **CLIENTS** : tableau des réservations confirmées prêtes à confirmer en vente.
+  - Colonnes : Client | Abonnement | Prix Abo | Prix Appareillage | Prix Total | Confirmer | Modifier | Supprimer.
+  - Bouton **Confirmer** → ouvre **Popup Sécurité** (login + mot de passe).
+    - Vérification via `supabase.auth.signInWithPassword` (réauth admin).
+    - Si OK → crée `client_sales` (statut `confirme`), met `material_reservations.status = 'installe'`, notification.
+
+---
+
+### 6. Page Ventes (`VentesPage.tsx`)
+
+- Tableau : Date | Acheteur | Abonnement | Total | Méthode Paiement | Statut.
+- Filtres par statut/méthode.
+- KPIs : total CA, ventes confirmées, en attente, refusées.
+
+---
+
+### 7. Notifications support
+
+Badge dynamique dans le sidebar sur "Réservation Matériel" affichant le nombre de `support_notifications` non-lues.
+Toast realtime à la création.
+
+---
+
+### Détails techniques
+
+- **Drag & drop** : utiliser `@dnd-kit/core` (installer si besoin).
+- **Auth re-verification** : `supabase.auth.signInWithPassword({ email: currentUser.email, password: input })` côté client pour valider sans déconnecter.
+- **Trigger SQL** sur `surfaces` AFTER INSERT pour créer la réservation + notification.
+- **Trigger SQL** sur `material_reservations` AFTER UPDATE OF status pour décrémenter stock quand passe à `reserve`.
+- **i18n** : ajout des clés FR/EN/AR (`nav.stock`, `nav.reservation`, `nav.ventes`, etc.).
+- **Realtime** : `ALTER PUBLICATION supabase_realtime ADD TABLE` pour les 5 nouvelles tables.
+
+### Fichiers créés
+- `supabase/migrations/<timestamp>_stock_system.sql`
+- `src/pages/admin/StockPage.tsx`
+- `src/pages/admin/ReservationMaterielPage.tsx`
+- `src/pages/admin/VentesPage.tsx`
+- `src/components/SecurityConfirmDialog.tsx`
+
+### Fichiers modifiés
+- `src/App.tsx` (routes)
+- `src/components/AdminLayout.tsx` (menu + badge)
+- `src/pages/admin/FinancePage.tsx` (suppr appareils, ajout Clients)
+- `src/i18n/translations.ts`
+- `src/types/models.ts`

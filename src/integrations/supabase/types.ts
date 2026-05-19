@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      client_sales: {
+        Row: {
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          equipment_price_dt: number
+          id: string
+          payment_method: string
+          profile_id: string
+          reservation_id: string | null
+          status: string
+          subscription_plan_id: string | null
+          subscription_price_dt: number
+          total_dt: number
+        }
+        Insert: {
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          equipment_price_dt?: number
+          id?: string
+          payment_method?: string
+          profile_id: string
+          reservation_id?: string | null
+          status?: string
+          subscription_plan_id?: string | null
+          subscription_price_dt?: number
+          total_dt?: number
+        }
+        Update: {
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          equipment_price_dt?: number
+          id?: string
+          payment_method?: string
+          profile_id?: string
+          reservation_id?: string | null
+          status?: string
+          subscription_plan_id?: string | null
+          subscription_price_dt?: number
+          total_dt?: number
+        }
+        Relationships: []
+      }
       climats: {
         Row: {
           created_at: string
@@ -118,6 +163,45 @@ export type Database = {
           name?: string
           price_dt?: number
           stock?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      material_reservations: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          profile_id: string | null
+          status: string
+          subscription_plan_id: string | null
+          surface_id: string | null
+          total_devices_price_dt: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          profile_id?: string | null
+          status?: string
+          subscription_plan_id?: string | null
+          surface_id?: string | null
+          total_devices_price_dt?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          profile_id?: string | null
+          status?: string
+          subscription_plan_id?: string | null
+          surface_id?: string | null
+          total_devices_price_dt?: number
           updated_at?: string
         }
         Relationships: []
@@ -281,6 +365,33 @@ export type Database = {
         }
         Relationships: []
       }
+      reservation_items: {
+        Row: {
+          created_at: string
+          id: string
+          quantity: number
+          reservation_id: string
+          stock_item_id: string
+          unit_price_dt: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          quantity?: number
+          reservation_id: string
+          stock_item_id: string
+          unit_price_dt?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          quantity?: number
+          reservation_id?: string
+          stock_item_id?: string
+          unit_price_dt?: number
+        }
+        Relationships: []
+      }
       soil_reports: {
         Row: {
           argile: number | null
@@ -389,6 +500,75 @@ export type Database = {
         }
         Relationships: []
       }
+      stock_items: {
+        Row: {
+          category: string
+          created_at: string
+          features: string | null
+          id: string
+          low_stock_threshold: number
+          name: string
+          purchase_price_dt: number
+          quantity: number
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          features?: string | null
+          id?: string
+          low_stock_threshold?: number
+          name: string
+          purchase_price_dt?: number
+          quantity?: number
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          features?: string | null
+          id?: string
+          low_stock_threshold?: number
+          name?: string
+          purchase_price_dt?: number
+          quantity?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      stock_movements: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          movement_type: string
+          quantity: number
+          reason: string | null
+          reservation_id: string | null
+          stock_item_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          movement_type?: string
+          quantity?: number
+          reason?: string | null
+          reservation_id?: string | null
+          stock_item_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          movement_type?: string
+          quantity?: number
+          reason?: string | null
+          reservation_id?: string | null
+          stock_item_id?: string
+        }
+        Relationships: []
+      }
       subscription_notifications: {
         Row: {
           client_email: string
@@ -485,6 +665,39 @@ export type Database = {
           id?: string
           name?: string
           price_dt?: number
+        }
+        Relationships: []
+      }
+      support_notifications: {
+        Row: {
+          created_at: string
+          created_for_role: string | null
+          id: string
+          is_read: boolean
+          link: string | null
+          message: string | null
+          notif_type: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          created_for_role?: string | null
+          id?: string
+          is_read?: boolean
+          link?: string | null
+          message?: string | null
+          notif_type?: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          created_for_role?: string | null
+          id?: string
+          is_read?: boolean
+          link?: string | null
+          message?: string | null
+          notif_type?: string
+          title?: string
         }
         Relationships: []
       }
