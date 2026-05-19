@@ -55,6 +55,9 @@ const pageTitleKeys: Record<string, string> = {
   "/admin/base-donnees": "nav.baseDonnees",
   "/admin/reclamations": "nav.reclamations",
   "/admin/finance": "nav.finance",
+  "/admin/stock": "nav.stock",
+  "/admin/reservation-materiel": "nav.reservationMateriel",
+  "/admin/ventes": "nav.ventes",
   "/admin/profile": "nav.profile",
 };
 
@@ -82,13 +85,29 @@ export default function AdminLayout() {
     enabled: !!profile && !isClientUser,
   });
 
+  // Pending support notifications count (real-time)
+  const { data: pendingSupport = 0 } = useQuery({
+    queryKey: ["support-notifications-count"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("support_notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("is_read", false);
+      return count ?? 0;
+    },
+    enabled: !!profile && !isClientUser,
+  });
+
   useEffect(() => {
     if (!profile || isClientUser) return;
     const ch = supabase
-      .channel("reclamations-badge")
+      .channel("badges-rt")
       .on("postgres_changes", { event: "*", schema: "public", table: "reclamations" }, () => {
         qc.invalidateQueries({ queryKey: ["reclamations-pending-count"] });
         qc.invalidateQueries({ queryKey: ["reclamations"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "support_notifications" }, () => {
+        qc.invalidateQueries({ queryKey: ["support-notifications-count"] });
       })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
@@ -176,6 +195,28 @@ export default function AdminLayout() {
                               aria-label={`${pendingReclamations} réclamations en attente`}
                             >
                               {pendingReclamations > 99 ? "99+" : pendingReclamations}
+                            </span>
+                          )}
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+            <SidebarGroup>
+              <SidebarGroupLabel>Stock</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {navStock.filter(item => item.roles.includes(userRole)).map((item) => (
+                    <SidebarMenuItem key={item.titleKey}>
+                      <SidebarMenuButton asChild>
+                        <NavLink to={item.url} end className="hover:bg-sidebar-accent/50" activeClassName="bg-primary/10 text-primary font-medium">
+                          <item.icon className="mr-2 h-4 w-4" />
+                          <span className="flex-1">{t(item.titleKey)}</span>
+                          {item.badgeKey === "support" && pendingSupport > 0 && (
+                            <span className="ml-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold animate-in zoom-in-50 duration-200">
+                              {pendingSupport > 99 ? "99+" : pendingSupport}
                             </span>
                           )}
                         </NavLink>
