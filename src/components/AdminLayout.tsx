@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Outlet, Navigate, useLocation, useNavigate } from "react-router-dom";
-import { Droplets, Grid3X3, Users, Briefcase, LogOut, CreditCard, LayoutDashboard, Cpu, Database, FileBarChart, HardDrive, MessageSquare, Wallet } from "lucide-react";
+import { Droplets, Grid3X3, Users, Briefcase, LogOut, CreditCard, LayoutDashboard, Cpu, Database, FileBarChart, HardDrive, MessageSquare, Wallet, Package, ClipboardList, ShoppingCart } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -16,7 +16,7 @@ import {
   SidebarTrigger, SidebarInset, SidebarHeader, SidebarFooter,
 } from "@/components/ui/sidebar";
 
-type NavItem = { titleKey: string; url: string; icon: any; roles: string[]; badgeKey?: "reclamations" };
+type NavItem = { titleKey: string; url: string; icon: any; roles: string[]; badgeKey?: "reclamations" | "support" };
 
 const navGlobal: NavItem[] = [
   { titleKey: "nav.dashboard", url: "/admin/dashboard", icon: LayoutDashboard, roles: ["ADMIN", "SOUS_ADMIN"] },
@@ -26,6 +26,12 @@ const navGlobal: NavItem[] = [
   { titleKey: "nav.rapports", url: "/admin/rapports", icon: FileBarChart, roles: ["ADMIN", "SOUS_ADMIN"] },
   { titleKey: "nav.reclamations", url: "/admin/reclamations", icon: MessageSquare, roles: ["ADMIN", "SOUS_ADMIN"], badgeKey: "reclamations" },
   { titleKey: "nav.baseDonnees", url: "/admin/base-donnees", icon: HardDrive, roles: ["ADMIN", "SOUS_ADMIN"] },
+];
+
+const navStock: NavItem[] = [
+  { titleKey: "nav.stock", url: "/admin/stock", icon: Package, roles: ["ADMIN", "SOUS_ADMIN"] },
+  { titleKey: "nav.reservationMateriel", url: "/admin/reservation-materiel", icon: ClipboardList, roles: ["ADMIN", "SOUS_ADMIN"], badgeKey: "support" },
+  { titleKey: "nav.ventes", url: "/admin/ventes", icon: ShoppingCart, roles: ["ADMIN", "SOUS_ADMIN"] },
 ];
 
 const navTravail: NavItem[] = [
