@@ -51,12 +51,12 @@ export default function UsersPage() {
         .from("profiles")
         .select("id, user_id, user_role, first_name, last_name, phone_number, location, created_by");
 
-      const profileMap = new Map(
-        (profiles ?? []).map((p: any) => [p.user_id, p])
-      );
+      const profileMap = new Map((profiles ?? []).map((p: any) => [p.user_id, p]));
+      const profileById = new Map((profiles ?? []).map((p: any) => [p.id, p]));
 
       let result = (users ?? []).map((u: any) => {
         const prof = profileMap.get(u.id);
+        const creator: any = prof?.created_by ? profileById.get(prof.created_by) : null;
         return {
           ...u,
           first_name: prof?.first_name || u.first_name || "",
@@ -65,11 +65,11 @@ export default function UsersPage() {
           phone_number: prof?.phone_number || "",
           location: prof?.location || "",
           created_by: prof?.created_by || null,
+          created_by_name: creator ? (`${creator.first_name ?? ""} ${creator.last_name ?? ""}`.trim() || "Sous-admin") : null,
           profile_id: prof?.id || null,
         };
       });
 
-      // SOUS_ADMIN: only see CLIENTs they created
       if (isSousAdmin && currentProfile?.id) {
         result = result.filter(
           (u: any) => u.created_by === currentProfile.id || u.profile_id === currentProfile.id
