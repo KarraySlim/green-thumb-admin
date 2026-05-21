@@ -51,12 +51,12 @@ export default function UsersPage() {
         .from("profiles")
         .select("id, user_id, user_role, first_name, last_name, phone_number, location, created_by");
 
-      const profileMap = new Map(
-        (profiles ?? []).map((p: any) => [p.user_id, p])
-      );
+      const profileMap = new Map((profiles ?? []).map((p: any) => [p.user_id, p]));
+      const profileById = new Map((profiles ?? []).map((p: any) => [p.id, p]));
 
       let result = (users ?? []).map((u: any) => {
         const prof = profileMap.get(u.id);
+        const creator: any = prof?.created_by ? profileById.get(prof.created_by) : null;
         return {
           ...u,
           first_name: prof?.first_name || u.first_name || "",
@@ -65,11 +65,11 @@ export default function UsersPage() {
           phone_number: prof?.phone_number || "",
           location: prof?.location || "",
           created_by: prof?.created_by || null,
+          created_by_name: creator ? (`${creator.first_name ?? ""} ${creator.last_name ?? ""}`.trim() || "Sous-admin") : null,
           profile_id: prof?.id || null,
         };
       });
 
-      // SOUS_ADMIN: only see CLIENTs they created
       if (isSousAdmin && currentProfile?.id) {
         result = result.filter(
           (u: any) => u.created_by === currentProfile.id || u.profile_id === currentProfile.id
@@ -220,6 +220,7 @@ export default function UsersPage() {
                 <TableHead>{t("auth.lastName")}</TableHead>
                 <TableHead>{t("auth.phone")}</TableHead>
                 <TableHead>Rôle</TableHead>
+                <TableHead>Ajouté par</TableHead>
                 <TableHead>Email vérifié</TableHead>
                 <TableHead>Inscrit le</TableHead>
                 <TableHead className="w-24">{t("common.actions")}</TableHead>
@@ -233,6 +234,7 @@ export default function UsersPage() {
                   <TableCell>{u.last_name || "—"}</TableCell>
                   <TableCell className="text-sm">{u.phone_number || "—"}</TableCell>
                   <TableCell>{getRoleBadge(u.user_role ?? "CLIENT")}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{(u as any).created_by_name ?? "—"}</TableCell>
                   <TableCell>
                     {u.email_confirmed_at ? (
                       <span className="flex items-center gap-1 text-emerald-600">
@@ -261,7 +263,7 @@ export default function UsersPage() {
               ))}
               {filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground">{t("users.noUser")}</TableCell>
+                  <TableCell colSpan={9} className="text-center text-muted-foreground">{t("users.noUser")}</TableCell>
                 </TableRow>
               )}
             </TableBody>
@@ -279,6 +281,11 @@ export default function UsersPage() {
               <Label>Email</Label>
               <p className="text-sm text-muted-foreground">{editing?.email}</p>
             </div>
+            {(editing as any)?.created_by_name && (
+              <div className="rounded-md border bg-muted/30 p-2 text-sm">
+                <span className="text-muted-foreground">Ajouté par :</span> <span className="font-medium">{(editing as any).created_by_name}</span>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>{t("auth.firstName")}</Label>
