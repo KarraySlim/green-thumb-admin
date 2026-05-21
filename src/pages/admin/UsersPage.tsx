@@ -220,6 +220,7 @@ export default function UsersPage() {
                 <TableHead>{t("auth.lastName")}</TableHead>
                 <TableHead>{t("auth.phone")}</TableHead>
                 <TableHead>Rôle</TableHead>
+                <TableHead>Ajouté par</TableHead>
                 <TableHead>Email vérifié</TableHead>
                 <TableHead>Inscrit le</TableHead>
                 <TableHead className="w-24">{t("common.actions")}</TableHead>
