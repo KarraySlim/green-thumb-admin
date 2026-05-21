@@ -234,6 +234,7 @@ export default function UsersPage() {
                   <TableCell>{u.last_name || "—"}</TableCell>
                   <TableCell className="text-sm">{u.phone_number || "—"}</TableCell>
                   <TableCell>{getRoleBadge(u.user_role ?? "CLIENT")}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{(u as any).created_by_name ?? "—"}</TableCell>
                   <TableCell>
                     {u.email_confirmed_at ? (
                       <span className="flex items-center gap-1 text-emerald-600">
