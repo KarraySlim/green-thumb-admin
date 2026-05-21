@@ -256,8 +256,9 @@ function SurfaceTable({
       // For installe -> nouvelle_demande, we manually return stock first.
       const { data: items } = await supabase.from("reservation_items").select("stock_item_id,quantity").eq("reservation_id", r.id);
       for (const it of items ?? []) {
-        await supabase.rpc as any; // placeholder
-        await supabase.from("stock_items").update({ quantity: (await supabase.from("stock_items").select("quantity").eq("id", it.stock_item_id).single()).data!.quantity + it.quantity }).eq("id", it.stock_item_id);
+        const cur = await supabase.from("stock_items").select("quantity").eq("id", it.stock_item_id).single();
+        const newQty = (cur.data?.quantity ?? 0) + it.quantity;
+        await supabase.from("stock_items").update({ quantity: newQty }).eq("id", it.stock_item_id);
         await supabase.from("stock_movements").insert({
           stock_item_id: it.stock_item_id, movement_type: "adjustment", quantity: it.quantity,
           reason: "Désinstallation parcelle — retour stock", reservation_id: r.id,
