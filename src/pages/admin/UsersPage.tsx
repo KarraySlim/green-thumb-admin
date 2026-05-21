@@ -281,6 +281,11 @@ export default function UsersPage() {
               <Label>Email</Label>
               <p className="text-sm text-muted-foreground">{editing?.email}</p>
             </div>
+            {(editing as any)?.created_by_name && (
+              <div className="rounded-md border bg-muted/30 p-2 text-sm">
+                <span className="text-muted-foreground">Ajouté par :</span> <span className="font-medium">{(editing as any).created_by_name}</span>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>{t("auth.firstName")}</Label>
