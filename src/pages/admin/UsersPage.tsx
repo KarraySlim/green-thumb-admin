@@ -263,7 +263,7 @@ export default function UsersPage() {
               ))}
               {filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground">{t("users.noUser")}</TableCell>
+                  <TableCell colSpan={9} className="text-center text-muted-foreground">{t("users.noUser")}</TableCell>
                 </TableRow>
               )}
             </TableBody>
